@@ -16,10 +16,8 @@ The MATLAB algorithm requires:
 Example input:
 
 ```text
-Embryo ID: 1
 Position: [x, y, z] mm
 Orientation: yaw angle in degrees
-State: free, clustered, selected etc...
 Destination: [x, y, z] mm
 ```
 
