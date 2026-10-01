@@ -8,9 +8,9 @@ import sys
 from PySide6.QtCore import QTimer
 from PySide6.QtWidgets import QApplication
 
-from mrex import __version__
-from mrex.ui.main_window import MainWindow
-from mrex.ui.theme import apply_theme
+from mrex_perception import __version__
+from mrex_perception.ui.main_window import MainWindow
+from mrex_perception.ui.theme import apply_theme
 
 
 def _parse_args(argv: list[str]) -> argparse.Namespace:

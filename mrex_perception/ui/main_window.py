@@ -6,9 +6,9 @@ import pyvista as pv
 from PySide6.QtGui import QAction
 from PySide6.QtWidgets import QHBoxLayout, QLabel, QMainWindow, QMessageBox, QWidget
 
-from mrex import __version__
-from mrex.ui.dashboard import DashboardPanel
-from mrex.ui.viewport import MultiViewPanel
+from mrex_perception import __version__
+from mrex_perception.ui.dashboard import DashboardPanel
+from mrex_perception.ui.viewport import MultiViewPanel
 
 
 class MainWindow(QMainWindow):

@@ -12,10 +12,10 @@
 
 | 阶段 | 内容 | 交付物 | 验收标准 | 参考工作量* |
 |---|---|---|---|---|
-| **M0** | 环境与骨架 | pyproject、`mrex` 包骨架、启动空窗口 | `python -m mrex` 弹出含三视图空窗口；依赖可导入 | 0.5–1 天 |
+| **M0** | 环境与骨架 | pyproject、`mrex_perception` 包骨架、启动空窗口 | `python -m mrex_perception` 弹出含三视图空窗口；依赖可导入 | 0.5–1 天 |
 | **M1** | 核心数据与配置 | `core/models`、`config/workspace`、`core/embryos`、`geometry` | 单元测试绿；随机布置/聚类/pixel 映射与 MATLAB 对照通过 | 1–1.5 天 |
 | **M2** | 运动·抓取·记录·汇总 | `core/motion`、`grasping`、`motion_log`、`summary`、`planner` | 固定 fixture 与 MATLAB 逐字段对齐（容差 1e-9） | 1.5–2 天 |
-| **M3** | 无头仿真引擎 | `core/engine` + CLI（`python -m mrex.cli run`） | 端到端随机仿真跑通并输出 JSON 汇总；停止语义正确 | 1 天 |
+| **M3** | 无头仿真引擎 | `core/engine` + CLI（`python -m mrex_perception.cli run`） | 端到端随机仿真跑通并输出 JSON 汇总；停止语义正确 | 1 天 |
 | **M4** | GUI（MVP 关键路径） | 三视图 + 仪表盘 + worker 线程 | 6 胚仿真 ≥50 FPS 无卡顿；Stop ≤200 ms；运行中可安全关窗 | 2–3 天 |
 | **M5** | YOLO 接入 | `YoloSource` 实装（方案 A/B 择一） | `sample.jpg` 检出胚并进入仿真；与 MATLAB 路径同 CSV 对齐 | 1 天 |
 | **M6** | 硬件接入 | `SerialPump` + 释放序列 | 虚拟串口环回测试通过；仿真模式零等待 | 0.5–1 天 |
@@ -50,7 +50,7 @@ gantt
 - [x] 根目录创建 `.venv`（Python 3.12.8）；初始化 `pyproject.toml`
 - [x] 安装：`numpy`、`PySide6`、`pyvista`、`pyvistaqt`、`pyqtgraph`、`PyYAML`、`pydantic`
 - [x] 安装开发工具：`pytest`、`pytest-qt`、`ruff`、`mypy`
-- [x] 创建 `mrex/` 包骨架（目录结构见架构文档 §4），`python -m mrex` 启动
+- [x] 创建 `mrex_perception/` 包骨架（目录结构见架构文档 §4），`python -m mrex_perception` 启动
 - [x] `MainWindow`：菜单栏 + 左仪表盘占位 + 右 2×2 网格放 3 个空白 `QtInteractor`（Top/Front/Right）+ 状态栏
 - [x] VS Code：`.vscode/settings.json` 指定解释器
 - [ ] 可选：安装 Qt Designer 扩展（`seanwu.vscode-qt-for-python`）与 `.ui` 编译任务（待确认）
@@ -123,14 +123,14 @@ gantt
 ### 任务清单
 
 - [ ] `core/engine.py`：`SimulationEngine`（主循环、阶段事件、停止/暂停令牌、快照构造）
-- [ ] `mrex/cli.py`：`python -m mrex.cli run --config default --source random --count 6 --seed 42 --steps 50 --report out.json`
+- [ ] `mrex_perception/cli.py`：`python -m mrex_perception.cli run --config default --source random --count 6 --seed 42 --steps 50 --report out.json`
 - [ ] 引擎测试：完整跑通（随机 + fixture 两种输入）；步间停止；落位区满；无可用胚（全部 clustered）
 - [ ] 汇总导出：`SummaryReport → JSON`（同时保留 `fprintf` 风格文本用于人工对照）
 
 ### 验收
 
 - 随机 6 胚、seed 固定：全部 `moved` 或按概率路径收尾，状态分布自洽（总账：moved+failed+free+clustered+selected+grasped = total）。
-- 全流程无 UI 依赖（`import mrex.core` 不引入 Qt）。
+- 全流程无 UI 依赖（`import mrex_perception.core` 不引入 Qt）。
 - Stop 语义：在任一插值步置停 → 立即 break，`FinishReason.STOPPED`，不回位、不产汇总（对齐 MATLAB）。
 - 与 MATLAB 的对照：固定 fixture + 强制抓取结果 → 汇总 JSON 全字段一致。
 
@@ -162,7 +162,7 @@ gantt
 
 | 风险 | 对策 |
 |---|---|
-| worker 直接操作 VTK 导致崩溃 | 铁律：渲染只在主线程；code review 检查 `mrex/ui` 中线程使用 |
+| worker 直接操作 VTK 导致崩溃 | 铁律：渲染只在主线程；code review 检查 `mrex_perception/ui` 中线程使用 |
 | 信号频率高于渲染能力 | latest-wins 缓冲 + UI 端 QTimer 拉取（架构文档 §7） |
 | VTK 释放顺序导致退出崩溃 | `closeEvent` 中断线程 → `plotter.close()` → `deleteLater()` 固定顺序 |
 
@@ -324,9 +324,9 @@ tests/test_parity.py                   # Python 侧：跑同一 fixture → 与 
 
 **工程**
 
-- [ ] `mrex.core` 零 Qt/VTK 依赖（可无头导入执行）
+- [ ] `mrex_perception.core` 零 Qt/VTK 依赖（可无头导入执行）
 - [ ] pytest 全绿；ruff/mypy 无新增告警
-- [ ] `python -m mrex.cli run` 与 GUI 结果一致
+- [ ] `python -m mrex_perception.cli run` 与 GUI 结果一致
 - [ ] PyInstaller 干净机器可运行（随机源路径）
 
 **扩展（非 MVP 门槛）**

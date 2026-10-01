@@ -27,10 +27,10 @@ dev = [
 ]
 
 [project.scripts]
-mrex = "mrex.main:main"
+mrex = "mrex_perception.main:main"
 
 [tool.setuptools.packages.find]
-include = ["mrex*"]
+include = ["mrex_perception*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

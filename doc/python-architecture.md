@@ -33,7 +33,7 @@
 
 ## 2. 设计原则
 
-1. **核心与 UI 严格分层**：`mrex/core/**` 不 import 任何 Qt/VTK；UI 只消费只读快照。
+1. **核心与 UI 严格分层**：`mrex_perception/core/**` 不 import 任何 Qt/VTK；UI 只消费只读快照。
 2. **语义保真优先**：移植阶段遇到 MATLAB 的"怪行为"（如 `clustered` 不参与选择）先原样保留，逐条记录在 §16，评审后再改。
 3. **单一数据流**：UI 只通过"命令 → 引擎 → 快照 → 渲染"单向流转，无双向状态同步。
 4. **可复现**：所有随机性通过注入的 `numpy.random.Generator` 实现，测试可固定 seed。
@@ -63,7 +63,7 @@ flowchart TB
         WORKER[SimulationWorker<br/>QThread]
     end
 
-    subgraph CORE["核心层 mrex/core（纯 Python，可无头运行）"]
+    subgraph CORE["核心层 mrex_perception/core（纯 Python，可无头运行）"]
         ENGINE[SimulationEngine<br/>主循环编排]
         PLANNER[planner 选胚/落位]
         MOTION[motion 运动插值]
@@ -108,9 +108,9 @@ M-REx_Perception/
 ├── doc/
 │   ├── python-architecture.md        # 本文档
 │   └── migration-plan.md             # 迁移计划
-├── mrex/                             # 【新增】Python 全栈应用
+├── mrex_perception/                  # 【新增】Python 全栈应用
 │   ├── __init__.py
-│   ├── __main__.py                   # 入口: python -m mrex
+│   ├── __main__.py                   # 入口: python -m mrex_perception
 │   ├── main.py                       # QApplication 启动与依赖装配
 │   ├── core/                         # 【纯逻辑】不依赖 Qt/VTK
 │   │   ├── __init__.py
@@ -164,7 +164,7 @@ M-REx_Perception/
 └── pyproject.toml                    # 【新增】依赖与工具配置
 ```
 
-**说明**：包名 `mrex` 与 MATLAB 中 "TaskFlow" 命名并存；如需改为 `taskflow` 只需整体重命名一次，文档中不依赖包名语义。
+**说明**：包名 `mrex_perception` 与 MATLAB 中 "Tas（2026-10-01 由 `mrex` 更名而来）` 只需整体重命名一次，文档中不依赖包名语义。
 
 ---
 
@@ -525,7 +525,7 @@ sequenceDiagram
 ### 10.1 接口定义
 
 ```python
-# mrex/detection/base.py
+# mrex_perception/detection/base.py
 class EmbryoSource(Protocol):
     def detect(self, workspace: Workspace) -> list[Embryo]: ...
 ```
@@ -553,7 +553,7 @@ image, image_width, image_height, class_id, confidence, x, y, width, height, the
 ## 11. 硬件抽象
 
 ```python
-# mrex/hardware/base.py
+# mrex_perception/hardware/base.py
 class PumpDriver(Protocol):
     def flush(self) -> None: ...
     def command(self, text: str) -> None: ...        # 透传命令
@@ -652,6 +652,6 @@ stop / cvolume / wrate <r> ml/min / tvolume <v> ml / wrun
 | D2 | PySide6（Widgets）而非 QML | 与 VTK 嵌入/仪表盘开发成本最低；QML 动效非硬需求 |
 | D3 | PyVista/VTK 而非 pyqtgraph.opengl | 多视口、正交投影、网格能力成熟；Rhino 式布局开箱即用 |
 | D4 | 快照 + latest-wins 而非逐事件信号 | 杜绝队列积压；线程边界清晰 |
-| D5 | `mrex/core` 零 Qt 依赖 | 可无头测试、可换 UI、可被 CLI/批处理复用 |
+| D5 | `mrex_perception/core` 零 Qt 依赖 | 可无头测试、可换 UI、可被 CLI/批处理复用 |
 | D6 | 工作区 YAML 原样复用（key 不改名） | 双端并行验证期零成本；MATLAB 仍可读同一文件 |
 | D7 | ID 保持 1-based | 与 MATLAB 日志/文档一致，减少对照成本 |
