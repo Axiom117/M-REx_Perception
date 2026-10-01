@@ -27,6 +27,11 @@ motionLog.moveYawChanges(end+1,1) = abs(yawDifference);
 
 for k = 1:numSteps
 
+    % stop as soon as a stop was requested from the figure
+    if simulationStopped()
+        break
+    end
+
     alpha = k / numSteps;
 
     % Interpolate position

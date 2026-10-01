@@ -1,12 +1,15 @@
 function embryos = detectEmbryos(imagePath, workspace)
 
-csvFile = "C:\Users\lukes\dev_ws\obb_predictions_v3.csv";
+% Prediction CSV written by the Python YOLO script (project root)
+thisFolder = fileparts(mfilename("fullpath"));
+projectFolder = fileparts(fileparts(thisFolder));
+csvFile = fullfile(projectFolder, "obb_predictions_v3.csv");
 
 if isfile(csvFile)
     delete(csvFile);
 end
 
-runYOLO(imagePath);
+runYOLO(imagePath, csvFile);
 
 if ~isfile(csvFile)
     error("YOLO did not create the expected prediction CSV.")

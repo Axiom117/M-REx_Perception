@@ -1,0 +1,11 @@
+size: [100, 40, 10]
+sourceregion: [0, 5, 20, 25]
+movedregion: [80, 5, 100, 25]
+movedSpacing: 4
+material: glass
+surfaceHeight: 0
+coeffFriction: 0.4
+youngsModulus: 70000000000
+poissonRatio: 0.22
+density: 2500
+surfaceEnergy: 0.1

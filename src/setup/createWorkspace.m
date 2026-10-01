@@ -1,26 +1,35 @@
-% Function for creating workspace for the embryo simulation
-function workspace = createWorkspace()
+% Function for creating the workspace for the embryo simulation.
+% Workspace properties are loaded from a YAML config file in the
+% project's config/workspace folder (selected by name).
+function workspace = createWorkspace(configName)
 
-% dimensions [mm]
-workspace.size = [100, 40, 10];
+if nargin < 1 || isempty(configName)
+    configName = "default";
+end
 
-% Source region
-workspace.sourceregion = [0, 5, 20, 25];
+configName = string(configName);
+configName = erase(configName, [".yaml", ".yml"]);
 
-% Moved region
-workspace.movedregion = [80, 5, 100, 25];
-workspace.movedSpacing = 4;
+% locate project folders relative to this file (src/setup/createWorkspace.m)
+thisFolder = fileparts(mfilename("fullpath"));
+projectFolder = fileparts(fileparts(thisFolder));
 
-% Workspace material
-workspace.material = "glass";
-workspace.surfaceHeight = 0;
+configFolder = fullfile(projectFolder, "config", "workspace");
 
-% Material Properties (for future contact mechanics)
+% use the first matching config file that exists
+configFile = "";
+for extension = [".yaml", ".yml"]
+    candidate = fullfile(configFolder, configName + extension);
+    if isfile(candidate)
+        configFile = candidate;
+        break
+    end
+end
 
-workspace.coeffFriction = 0.40;
-workspace.youngsModulus = 70e9;      % Pa
-workspace.poissonRatio = 0.22;
-workspace.density = 2500;            % kg/m^3
-workspace.surfaceEnergy = 0.10;      % J/m^2
+if configFile == ""
+    error("Workspace config not found: " + fullfile(configFolder, configName + ".yaml"))
+end
+
+workspace = loadWorkspaceConfig(configFile);
 
 end

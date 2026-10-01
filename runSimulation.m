@@ -2,8 +2,10 @@ clear
 clc
 close all
 
-projectFolder = fileparts( ...
-    matlab.desktop.editor.getActiveFilename);
+% clear any stop request left over from a previous run
+setappdata(0, "TaskFlowStopSimulation", false);
+
+projectFolder = fileparts(mfilename("fullpath"));
 
 addpath(genpath(fullfile(projectFolder,"src")));
 
@@ -11,8 +13,11 @@ addpath(genpath(fullfile(projectFolder,"src")));
 mode = "simulation";
 % mode = "actual";
 
+% Workspace config: name of a YAML config file in the config/workspace folder
+workspaceConfig = "default";
+
 % create workspace for simulation
-workspace = createWorkspace();
+workspace = createWorkspace(workspaceConfig);
 
 % initialize pump and hardware
 hardware = struct();
@@ -47,16 +52,36 @@ switch mode
 
 end
 
+% Embryo source: "random" populates randomly arranged embryos,
+% "image" detects embryos from a picture with YOLO
+embryoSource = "random";
+% embryoSource = "image";
+numRandomEmbryos = 6;
+
 % create path to python code and extract position
-imagePath = ...
-    "C:\Users\lukes\dev_yolo\datasets\test7_3\40xtest3.jpg";
+imagePath = fullfile(projectFolder, "images", "sample.jpg");
 
 numSteps = 50;
 showIDs = false;
 showArrows = false;
 targetPoint = [50; 50; 0.1];
 
-embryos = detectEmbryos(imagePath, workspace);
+switch embryoSource
+
+    case "image"
+
+        embryos = detectEmbryos(imagePath, workspace);
+
+    case "random"
+
+        embryos = populateEmbryos(workspace, numRandomEmbryos);
+
+    otherwise
+
+        error("Unknown embryo source.")
+
+end
+
 embryos = detectClusteredEmbryos(embryos);
 
 toolhead = createToolHead(workspace);
@@ -66,17 +91,13 @@ motionLog = recordToolMotion(motionLog, toolhead);
 
 figure
 
-plotEmbryos3D( ...
-    workspace, embryos, showIDs, showArrows)
-
-hold on
-plotToolHead3D(toolhead)
-
-title("Initial workspace")
+updateSimulation( ...
+    workspace, embryos, toolhead, showIDs, showArrows, ...
+    "Initial workspace")
 
 % run simulation
 
-while hasFreeEmbryos(embryos)
+while hasFreeEmbryos(embryos) && ~simulationStopped()
 
     embryos = selectNearEmbryo(embryos, targetPoint);
 
@@ -90,18 +111,9 @@ while hasFreeEmbryos(embryos)
             showArrows, ...
             motionLog);
 
-    clf
-
-    plotEmbryos3D( ...
-        workspace, embryos, showIDs, showArrows)
-
-    hold on
-    plotToolHead3D(toolhead)
-
-    title("Tool above selected embryo")
-
-    drawnow
-    pause(0.2)
+    updateSimulation( ...
+        workspace, embryos, toolhead, showIDs, showArrows, ...
+        "Tool above selected embryo", 0.2)
 
     [embryos, toolhead] = ...
         graspEmbryo(embryos, toolhead, hardware);
@@ -124,20 +136,9 @@ while hasFreeEmbryos(embryos)
         continue
     end
 
-    clf
-
-    plotEmbryos3D( ...
-        workspace, embryos, showIDs, showArrows)
-
-    hold on
-    plotToolHead3D(toolhead)
-
-    
-    title("Embryo grasped")
-
-    drawnow
-    pause(0.2)
-
+    updateSimulation( ...
+        workspace, embryos, toolhead, showIDs, showArrows, ...
+        "Embryo grasped", 0.2)
 
     movedPosition = ...
         getMovedPosition(embryos, workspace);
@@ -153,18 +154,9 @@ while hasFreeEmbryos(embryos)
             showArrows, ...
             motionLog);
 
-    clf
-
-    plotEmbryos3D( ...
-        workspace, embryos, showIDs, showArrows)
-
-    hold on
-    plotToolHead3D(toolhead)
-
-    title("Tool above moved position")
-
-    drawnow
-    pause(0.2)
+    updateSimulation( ...
+        workspace, embryos, toolhead, showIDs, showArrows, ...
+        "Tool above moved position", 0.2)
 
     [embryos, toolhead] = ...
         releaseEmbryo( ...
@@ -173,19 +165,16 @@ while hasFreeEmbryos(embryos)
     motionLog = recordToolMotion( ...
         motionLog, toolhead);
 
-    clf
+    updateSimulation( ...
+        workspace, embryos, toolhead, showIDs, showArrows, ...
+        "Embryo released", 0.2)
 
-    plotEmbryos3D( ...
-        workspace, embryos, showIDs, showArrows)
+end
 
-    hold on
-    plotToolHead3D(toolhead)
-
-    title("Embryo released")
-
-    drawnow
-    pause(0.2)
-
+% stop without returning home or reporting when requested
+if simulationStopped()
+    disp("Simulation stopped before completion.")
+    return
 end
 
 [embryos, toolhead, motionLog] = ...
