@@ -22,3 +22,13 @@ embryo_pictures/
 
 # Video files
 *.mp4
+
+# Python tooling caches
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Python packaging
+build/
+dist/
+*.egg-info/

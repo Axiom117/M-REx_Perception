@@ -1,0 +1,49 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mrex-perception"
+version = "0.1.0"
+description = "M-REx Perception - embryo pick-and-place simulation and control GUI (Python full-stack)"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "numpy>=2.0",
+    "PySide6>=6.7",
+    "pyvista>=0.44",
+    "pyvistaqt>=0.11",
+    "pyqtgraph>=0.13.7",
+    "PyYAML>=6.0",
+    "pydantic>=2.7",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.2",
+    "pytest-qt>=4.4",
+    "ruff>=0.6",
+    "mypy>=1.11",
+]
+
+[project.scripts]
+mrex = "mrex.main:main"
+
+[tool.setuptools.packages.find]
+include = ["mrex*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+qt_api = "pyside6"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+extend-exclude = [".venv", "python"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.mypy]
+python_version = "3.12"
+ignore_missing_imports = true
