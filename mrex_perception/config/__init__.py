@@ -1,1 +1,1 @@
-"""Configuration loading (workspace YAML + application defaults). Implemented in M1."""
+"""Configuration subsystem: shared YAML reading (loader) + per-type config schemas."""

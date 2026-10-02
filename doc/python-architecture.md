@@ -117,6 +117,7 @@ M-REx_Perception/
 │   │   ├── models.py                 # Workspace / Embryo / ToolHead / Snapshot
 │   │   ├── states.py                 # EmbryoState / ToolState 枚举（字符串值对齐 MATLAB）
 │   │   ├── geometry.py               # pixel_to_workspace 等坐标工具
+│   │   ├── math_ops.py               # 数学工具：rotation_z / make_pose（无域类型依赖）
 │   │   ├── embryos.py                # populate_random / from_detections / mark_clustered
 │   │   ├── tool.py                   # create_tool_head
 │   │   ├── planner.py                # has_free / select_nearest_free / next_moved_position
@@ -147,7 +148,8 @@ M-REx_Perception/
 │   │   └── screenshot.py             # 截图导出（对应 saveImage.m）
 │   └── config/
 │       ├── __init__.py
-│       ├── workspace.py              # pydantic 模型 + PyYAML 加载（复用 config/workspace/*.yaml）
+│       ├── loader.py                 # 通用 YAML 读取机制（路径解析 / 解析 / 报错）
+│       ├── workspace.py              # workspace schema（pydantic）+ load_workspace
 │       └── app_settings.py           # 应用默认参数（config/app.yaml，可选）
 ├── config/
 │   └── workspace/

@@ -69,18 +69,18 @@ gantt
 
 ---
 
-## 3. M1 — 核心数据与配置
+## 3. M1 — 核心数据与配置（✅ 完成于 2026-10-02）
 
 ### 任务清单
 
-- [ ] `core/states.py`：`EmbryoState` / `ToolState` 枚举，字符串值与 MATLAB 完全一致
-- [ ] `core/models.py`：`Workspace`、`Embryo`、`ToolHead` 数据类（字段表见架构文档 §5）
-- [ ] `config/workspace.py`：PyYAML + pydantic 加载 `config/workspace/default.yaml`（**字段名不改**），校验规则对齐 `loadWorkspaceConfig.m`
-- [ ] `core/geometry.py`：`pixel_to_workspace`
-- [ ] `core/embryos.py`：`populate_random`、`from_detections`（先用手造 CSV/记录测试）、`mark_clustered`
-- [ ] `core/tool.py`：`create_tool_head`（含初始位置 `[15, 17.5, 10]` 的推导式）
-- [ ] `tests/fixtures/scenario_basic.json`：固定工作区 + 固定 6 胚（位置/朝向/attempts 全部显式）
-- [ ] 单元测试：`test_workspace.py`、`test_embryos.py`、`test_geometry.py`
+- [x] `core/states.py`：`EmbryoState` / `ToolState` 枚举，字符串值与 MATLAB 完全一致
+- [x] `core/models.py`：`Workspace`、`Embryo`、`ToolHead` 数据类（字段表见架构文档 §5）
+- [x] `config/workspace.py`：PyYAML + pydantic 加载 `config/workspace/default.yaml`（**字段名不改**），校验规则对齐 `loadWorkspaceConfig.m`
+- [x] `core/geometry.py`：`pixel_to_workspace`（已与 MATLAB 逐位对照：6 样例 `%.17g` 完全一致）
+- [x] `core/embryos.py`：`populate_random`、`from_detections`（先用手造 CSV/记录测试）、`mark_clustered`
+- [x] `core/tool.py`：`create_tool_head`（含初始位置 `[15, 17.5, 10]` 的推导式）
+- [x] `tests/fixtures/scenario_basic.json`：固定工作区 + 固定 6 胚（位置/朝向/attempts 全部显式）
+- [x] 单元测试：`test_workspace.py`、`test_embryos.py`、`test_geometry.py`、`test_tool.py`（29 用例全绿）
 
 ### 验收
 
