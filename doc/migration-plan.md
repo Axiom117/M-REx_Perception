@@ -80,7 +80,7 @@ gantt
 - [x] `core/setup/embryos.py`：`populate_random`、`from_detections`（先用手造 CSV/记录测试）、`mark_clustered`
 - [x] `core/setup/tool.py`：`create_tool_head`（含初始位置 `[15, 17.5, 10]` 的推导式）
 - [x] `tests/fixtures/scenario_basic.json`：固定工作区 + 固定 6 胚（位置/朝向/attempts 全部显式）
-- [x] 单元测试：`test_workspace.py`、`test_embryos.py`、`test_geometry.py`、`test_tool.py`（29 用例全绿）
+- [x] 单元测试：`tests/core/test_math.py`、`tests/core/test_setup.py`、`tests/test_config.py`（29 用例全绿；2026-10-04 按 core 分层重组，见 `tests/README.md`）
 
 ### 验收
 
@@ -103,7 +103,7 @@ gantt
 - [x] `core/sim/grasping.py`：`pickup_probability` / `grasp` / `release`（RNG 与 Pump 注入）
 - [x] `core/reporting/summary.py`：`compute_summary` → `SummaryReport`（字段对齐 `simulationSummary.m`）
 - [x] `tests/matlab/dumpFixture.m`：MATLAB 侧读同一 fixture、跑同一函数、导出 JSON（输出 `trace_m2.json` 已入库；headless 渲染阴影见 `tests/matlab/updateSimulation.m`）
-- [x] 单元测试：`test_motion.py`、`test_grasping.py`、`test_planner.py`、`test_summary.py`（另含 `test_motion_log.py`、`test_parity.py`）
+- [x] 单元测试：`tests/core/test_motion.py`、`tests/core/test_grasping.py`、`tests/core/test_planner.py`、`tests/core/test_summary.py`（另含 `tests/test_parity.py` 双端对齐）
 
 ### 验收（数值对齐，容差 1e-9）
 
@@ -233,7 +233,7 @@ gantt
 | `src/visualization/addStopControls.m` | `ui/dashboard.py`（Stop 按钮）+ `core/engine.py::StopToken` | |
 | `src/visualization/simulationStopped.m` | `core/engine.py::StopToken.is_set` | 全局 appdata 标志改为显式令牌 |
 | `src/visualization/saveImage.m` | `ui/screenshot.py::save_screenshots` | `plotter.screenshot` |
-| `tests/tst2.m` | `tests/test_*.py` | 旧脚本保留 |
+| `tests/tst2.m` | `tests/`（pytest 单元 + 双端对齐） | 旧脚本已删除（可随时从 git 历史恢复） |
 | `python/extract_obb_data.py` | 保持不动；M5 由 `YoloSource` 调用 | CSV 契约不变 |
 | `python/train.py` / `convert.py` / `fix_labels.py` | 保持不动 | 训练侧工具链 |
 
@@ -245,8 +245,8 @@ gantt
 
 ```
 tests/fixtures/scenario_basic.json     # workspace + 胚胎列表 + 工具初始状态 + 引擎参数 + 脚本化抓取结果
-tests/matlab/dumpFixture.m             # MATLAB 侧：读 fixture → 逐步执行 → 导出 trace.json
-tests/test_parity.py                   # Python 侧：跑同一 fixture → 与 trace.json 对比（容差 1e-9）
+tests/matlab/dumpFixture.m             # MATLAB 侧：读 fixture → 逐步执行 → 导出 trace_m2.json
+tests/test_parity.py                   # Python 侧：复跑同一路径 → 与 trace_m2.json 逐字段对比（容差 1e-9）
 ```
 
 `scenario_basic.json` 建议结构（示例）：

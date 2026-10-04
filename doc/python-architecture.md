@@ -172,14 +172,17 @@ M-REx_Perception/
 ├── python/                           # 【保留】YOLO 工具链（训练/推理脚本 + models）
 ├── src/                              # 【保留】MATLAB 参考实现（冻结，仅作对照）
 ├── tests/
+│   ├── README.md                     # 测试布局 + matlab/ parity 工具说明
+│   ├── core/                         # 与 core 分层对应（math/setup/motion/planner/grasping/summary）
 │   ├── fixtures/                     # 场景 JSON（确定性输入，供双端对照）
 │   │   └── scenario_basic.json
-│   ├── matlab/                       # 【新增】MATLAB 侧 parity dump（headless）
+│   ├── matlab/                       # MATLAB 侧 parity 工具（用法见 tests/README.md）
 │   │   ├── dumpFixture.m             # 跑冻结的 src/** 导出 trace_m2.json
 │   │   ├── updateSimulation.m        # 渲染阴影（no-op/录制，headless 用）
 │   │   └── trace_m2.json             # MATLAB 参考 trace（已入库）
-│   ├── test_*.py                     # 单元测试 + 双端对齐（pytest）
-│   └── tst2.m                        # 【保留】旧 MATLAB 测试
+│   ├── test_config.py                # config loader + workspace 校验
+│   ├── test_parity.py                # MATLAB 双端 1e-9 对齐
+│   └── test_smoke.py                 # 应用导入/启动冒烟
 └── pyproject.toml                    # 【新增】依赖与工具配置
 ```
 
