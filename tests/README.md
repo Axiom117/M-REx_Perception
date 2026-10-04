@@ -12,8 +12,10 @@ tests/
 │   ├── test_motion.py   # move_tool 及包装函数 + MotionLog / ZYX 提取
 │   ├── test_planner.py  # 选择与落位网格
 │   ├── test_grasping.py # 抓取概率 / 成败路径 / 释放
-│   └── test_summary.py  # 统计汇总
+│   ├── test_summary.py  # 统计汇总
+│   └── test_engine.py   # 无头引擎：全流程 / 停止语义 / 落位区满 / 快照钩子
 ├── test_config.py       # config loader + workspace 校验
+├── test_cli.py          # 无头 CLI 端到端 + JSON 报告
 └── test_smoke.py        # 应用导入/启动冒烟
 ```
 

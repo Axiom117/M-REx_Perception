@@ -24,8 +24,7 @@ class ToolState(StrEnum):
     """Tool head states.
 
     ``LIFTED`` is set by ``raise_tool`` (the failed-grasp path of the main
-    loop); ``CONTACT`` / ``PLACE_CONTACT`` come from the legacy ``lowerTool*.m``
-    files, which are kept for fidelity but never wired into the engine.
+    loop).
     """
 
     HOME = "home"
@@ -34,7 +33,4 @@ class ToolState(StrEnum):
     FAILED_GRASP = "failedGrasp"
     ABOVE_MOVED_POSITION = "aboveMovedPosition"
     RELEASED = "released"
-    # legacy states (kept for fidelity; the main loop does not use them)
     LIFTED = "lifted"
-    CONTACT = "contact"
-    PLACE_CONTACT = "placeContact"

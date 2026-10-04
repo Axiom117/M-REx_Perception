@@ -105,9 +105,3 @@ class MotionLog:
             "tool_state": list(self._tool_state),
             "move_yaw_changes": list(self._move_yaw_changes),
         }
-
-
-def record_tool_motion(motion_log: MotionLog, tool: LoggableTool) -> MotionLog:
-    """MATLAB-style functional wrapper (``motionLog = recordToolMotion(...)``)."""
-    motion_log.record(tool)
-    return motion_log

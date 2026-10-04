@@ -440,6 +440,8 @@ return FinishReason.COMPLETED
 
 停止语义：`stop()` 置 `threading.Event`；`move_tool` 每个插值步检查（与 MATLAB 逐步检查一致），停止延迟 ≤ 1 步。
 
+> ✅ 2026-10-04（M3）：已实装于 `core/engine.py`（`SimulationEngine` / `EngineParams` / `Snapshot` / `FinishReason`）与 `mrex_perception/cli.py`。停止检查点与 MATLAB 完全一致（仅循环顶 + 插值步内），停后当前迭代的抓取/释放仍会执行（见 §16-⑪）；暂停/单步留待 M4 worker 在 `on_step` 钩子处阻塞实现。
+
 ---
 
 ## 7. 线程模型
@@ -650,7 +652,7 @@ stop / cvolume / wrate <r> ml/min / tvolume <v> ml / wrun
 |---|---|---|---|
 | ① | `clustered` 胚胎永不参与选择 | 主循环只选 `free` | 确认是否符合实验意图；如需要"先处理聚类"另开需求 |
 | ② | `movedregion=[80,5,100,25]` 的 x 范围 80→180 超出 `size[0]=100` | 不校验，6 个胚时不会越界 | 保持；在 M1 做一次配置合理性质询（改 YAML 或加校验） |
-| ③ | `lowerTool.m` / `lowerToolMoved.m` 调用 `moveTool` 时参数错位（少传 `targetRotation`），且 `lowerTool.m` 还有拼写错误 `attaachedID`；主循环未调用 | 死代码，从未可运行 | Python 端按函数注释语义实现**修正版**，但标注 legacy、不接入主循环 |
+| ③ | `lowerTool.m` / `lowerToolMoved.m` 调用 `moveTool` 时参数错位（少传 `targetRotation`），且 `lowerTool.m` 还有拼写错误 `attaachedID`；主循环未调用 | 死代码，从未可运行 | 已删除（2026-10-04 M2 检视：修正版 Python 移植无调用方，连同 `record_tool_motion` 包装一并清理） |
 | ④ | MATLAB `rand` 与 numpy RNG 序列不同 | — | 双端对齐只针对确定性部分；随机部分用"固定输入 fixture + 强制结果"策略 |
 | ⑤ | 释放后胚胎朝向固定 `yaw=π/2`，不可配置 | 硬编码 | 先保真；后续提出可配置参数 |
 | ⑥ | `success_rate` 分母是 `moved+failed`（不含 free/clustered 残留） | 对齐 `simulationSummary.m` | 保真；UI 上同时显示"剩余未处理"避免误读 |
@@ -658,6 +660,7 @@ stop / cvolume / wrate <r> ml/min / tvolume <v> ml / wrun
 | ⑧ | `moveTool` 每步全量重绘（MATLAB `clf`） | 卡顿来源 | Python 端天然解耦，渲染在 UI 线程按帧率刷新 |
 | ⑨ | `velocity/max_velocity/path` 字段存在但未参与运动学 | 预留 | 保留字段 |
 | ⑩ | `contactRadius`、`surfaceHeight`、材料参数未参与当前计算 | 预留 | 保留字段 |
+| ⑪ | 停止请求只在主循环顶部与 `moveTool` 插值步内被检查 | 停后当前迭代仍会执行 grasp/release（剩余移动立即 break），随后返回 STOPPED | 保真（engine）；停后不回位、不产汇总，见 §6.8 |
 
 ---
 

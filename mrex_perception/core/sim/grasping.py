@@ -25,7 +25,7 @@ class Pump(Protocol):
     def dispense(self, volume: float) -> None: ...
 
 
-class RandomSource(Protocol):
+class RngLike(Protocol):
     """Minimal RNG surface (``np.random.Generator`` satisfies it)."""
 
     def random(self) -> float: ...
@@ -47,7 +47,7 @@ def pickup_probability(embryo: Embryo) -> float:
 def grasp(
     embryos: list[Embryo],
     tool: ToolHead,
-    rng: RandomSource,
+    rng: RngLike,
     pump: Pump | None = None,
 ) -> None:
     """Attempt to grasp the selected embryo (port of ``graspEmbryo.m``).

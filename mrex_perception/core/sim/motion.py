@@ -9,10 +9,6 @@ All functions mutate ``embryos`` / ``tool`` in place and append to the passed
 ``MotionLog``; MATLAB's value-based ``[embryos, tool, motionLog]`` returns
 become in-place updates. ID convention: ``tool.attached_embryo_id`` is 1-based
 and indexes ``embryos[id - 1]`` (migration plan §9.3).
-
-``lower_tool`` / ``lower_tool_moved`` are the corrected-semantics ports of the
-never-working MATLAB legacy files (argument mix-up + typo, see §16-②); they
-are kept for fidelity but are not wired into the engine.
 """
 
 from __future__ import annotations
@@ -216,64 +212,4 @@ def return_home(
     tool.state = ToolState.HOME
 
 
-def lower_tool(
-    embryos: list[Embryo],
-    tool: ToolHead,
-    num_steps: int,
-    motion_log: MotionLog,
-    *,
-    stop_token: StopToken | None = None,
-    on_step: Callable[[], None] | None = None,
-) -> None:
-    """Legacy (not wired into the engine): lower onto the selected embryo.
 
-    Corrected-semantics port of ``lowerTool.m`` (the MATLAB version mixed up
-    arguments and referenced a misspelled variable, so it never ran); the
-    intended target is ``position + [0, 0, embryo.height + tool.height]``.
-    """
-    selected = _find_selected(embryos)
-    if selected is None:
-        warnings.warn("No embryo found", stacklevel=2)
-        return
-
-    target_position = selected.position + np.array([0.0, 0.0, selected.height + tool.height])
-    move_tool(
-        embryos,
-        tool,
-        target_position,
-        tool.orientation,
-        num_steps,
-        motion_log,
-        stop_token=stop_token,
-        on_step=on_step,
-    )
-    tool.state = ToolState.CONTACT
-
-
-def lower_tool_moved(
-    embryos: list[Embryo],
-    tool: ToolHead,
-    num_steps: int,
-    moved_position: ArrayLike,
-    motion_log: MotionLog,
-    *,
-    stop_token: StopToken | None = None,
-    on_step: Callable[[], None] | None = None,
-) -> None:
-    """Legacy (not wired into the engine): lower onto the drop-off position.
-
-    Corrected-semantics port of ``lowerToolMoved.m`` (same argument mix-up as
-    ``lowerTool.m``); target is ``moved_position + [0, 0, tool.height]``.
-    """
-    target_position = np.asarray(moved_position, dtype=float) + np.array([0.0, 0.0, tool.height])
-    move_tool(
-        embryos,
-        tool,
-        target_position,
-        tool.orientation,
-        num_steps,
-        motion_log,
-        stop_token=stop_token,
-        on_step=on_step,
-    )
-    tool.state = ToolState.PLACE_CONTACT

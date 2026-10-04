@@ -12,13 +12,10 @@ from mrex_perception.core.setup import create_tool_head
 from mrex_perception.core.sim import (
     MotionLog,
     extract_zyx_angles,
-    lower_tool,
-    lower_tool_moved,
     move_tool,
     move_tool_final,
     move_tool_to_embryo,
     raise_tool,
-    record_tool_motion,
     return_home,
 )
 
@@ -209,29 +206,6 @@ def test_wrappers_warn_when_target_missing() -> None:
         move_tool_final([], tool, 10, np.zeros(3), log)
 
 
-# -- legacy (corrected semantics, not wired into the engine) -----------------
-
-
-def test_legacy_lower_tool_corrected_semantics() -> None:
-    embryo = Embryo(id=1, position=np.array([5.0, 8.0, 0.1]), state=EmbryoState.SELECTED)
-    tool = _tool()
-    log = MotionLog()
-
-    lower_tool([embryo], tool, 10, log)
-    assert tool.state == ToolState.CONTACT
-    expected = embryo.position + np.array([0.0, 0.0, embryo.height + tool.height])
-    assert tool.position == pytest.approx(expected)
-
-    moved = np.array([81.0, 6.0, 0.1])
-    lower_tool_moved([], tool, 10, moved, log)
-    assert len(log) == 20
-    assert tool.state == ToolState.PLACE_CONTACT
-    assert tool.position == pytest.approx(moved + np.array([0.0, 0.0, tool.height]))
-
-    with pytest.warns(UserWarning, match="No embryo found"):
-        lower_tool([Embryo(id=1)], tool, 10, log)
-
-
 # -- MotionLog recording / ZYX extraction -------------------------------------
 
 
@@ -250,7 +224,7 @@ def test_motion_log_recording() -> None:
     assert log.tool_state.tolist() == ["grasped"]
 
     log.record(_StubTool(np.eye(4)))  # missing state -> "unknown"
-    record_tool_motion(log, create_tool_head(load_workspace("default")))
+    log.record(create_tool_head(load_workspace("default")))
     assert log.tool_state.tolist() == ["grasped", "unknown", "home"]
 
 

@@ -98,7 +98,7 @@ gantt
 - [x] `core/sim/motion_log.py`：`MotionLog` + `record_tool_motion`（ZYX 提取 + 万向锁分支）
 - [x] `core/sim/motion.py`：`move_tool`（最短角插值、胚随动、`on_step` 回调、`stop_token`）
 - [x] `core/sim/motion.py`：`move_tool_to_embryo` / `move_tool_final` / `raise_tool` / `return_home`
-- [x] `core/sim/motion.py`：`lower_tool` / `lower_tool_moved`（legacy，仅移植不接入）
+- [x] ~~`core/sim/motion.py`：`lower_tool` / `lower_tool_moved`（legacy，仅移植不接入）~~（2026-10-04 M2 检视后删除，见下方检视记录）
 - [x] `core/sim/planner.py`：`has_free_embryos` / `select_nearest_free` / `select_embryo` / `next_moved_position`
 - [x] `core/sim/grasping.py`：`pickup_probability` / `grasp` / `release`（RNG 与 Pump 注入）
 - [x] `core/reporting/summary.py`：`compute_summary` → `SummaryReport`（字段对齐 `simulationSummary.m`）
@@ -117,23 +117,25 @@ gantt
 | `compute_summary` | 用同一 `motionLog` 数据对比全部统计字段（含 `np.unwrap` 结果） |
 
 > ✅ 2026-10-04：上表全部检查已实装。MATLAB 侧 trace 由 `tests/matlab/dumpFixture.m` 生成（`matlab -batch "cd tests/matlab; dumpFixture"`，含脚本化抓取结果与逐字段汇总），Python 侧在 `tests/test_parity.py` 中复跑同一路径逐值对比（容差 1e-9）；另有 90 个单元测试与端到端落位总账验证（100 用例全绿）。`lowerTool*.m` 按修正语义移植（未接入引擎）；`clustered` 不参与汇总计数等 MATLAB 行为均已保真。双端对照套件（fixture、`tests/matlab/`、`test_parity.py`）于同日按精简计划整体移除，数值基线固化在单元测试断言中（见 §9 备注）。
+>
+> **M2 检视与清理（2026-10-04）**：删除无调用方的 `record_tool_motion` 函数式包装与 `lower_tool` / `lower_tool_moved`（连同专用枚举值 `ToolState.CONTACT` / `PLACE_CONTACT`；MATLAB 原实现因参数错位从未可运行、主循环从不调用）；`grasping.RandomSource` 协议更名 `RngLike`，避免与 M5 规划的 `detection.RandomSource`（胚胎源适配器）撞名。清理后单元测试 41 用例全绿（M3 后 49）。
 
 ---
 
-## 5. M3 — 无头仿真引擎
+## 5. M3 — 无头仿真引擎（✅ 完成于 2026-10-04）
 
 ### 任务清单
 
-- [ ] `core/engine.py`：`SimulationEngine`（主循环、阶段事件、停止/暂停令牌、快照构造）
-- [ ] `mrex_perception/cli.py`：`python -m mrex_perception.cli run --config default --source random --count 6 --seed 42 --steps 50 --report out.json`
-- [ ] 引擎测试：完整跑通（随机 + fixture 两种输入）；步间停止；落位区满；无可用胚（全部 clustered）
-- [ ] 汇总导出：`SummaryReport → JSON`（同时保留 `fprintf` 风格文本用于人工对照）
+- [x] `core/engine.py`：`SimulationEngine`（主循环、阶段事件、停止令牌、快照构造；暂停/单步留待 M4 worker 基于 `on_step` 钩子阻塞实现）
+- [x] `mrex_perception/cli.py`：`python -m mrex_perception.cli run --config default --source random --count 6 --seed 42 --steps 50 --report out.json`（另有 `--target`）
+- [x] 引擎测试 `tests/core/test_engine.py`：随机全流程总账、确定性 fixture 落位网格、步间停止、落位区满、全 clustered、钩子/快照深拷贝；CLI 测试 `tests/test_cli.py`
+- [x] 汇总导出：`SummaryReport → JSON`（`--report`）+ `format_summary_text`（fprintf 风格文本，人工对照用）
 
 ### 验收
 
-- 随机 6 胚、seed 固定：全部 `moved` 或按概率路径收尾，状态分布自洽（总账：moved+failed+free+clustered+selected+grasped = total）。
-- 全流程无 UI 依赖（`import mrex_perception.core` 不引入 Qt）。
-- Stop 语义：在任一插值步置停 → 立即 break，`FinishReason.STOPPED`，不回位、不产汇总（对齐 MATLAB）。
+- ✅ 随机 6 胚、seed 固定：全部 `moved` 或按概率路径收尾，状态分布自洽（seed=42 实测：4 moved / 2 failed / free=0；总账 moved+failed+free+clustered+selected+grasped = total）。
+- ✅ 全流程无 UI 依赖（`import mrex_perception.core` 实测不引入 PySide6/VTK/PyVista）。
+- ✅ Stop 语义：在任一插值步置停 → 插值循环立即 break，`FinishReason.STOPPED`、不回位、不产汇总（`summary=None`）。保真细节：检查点仅为主循环顶部 + 插值步内，故停止后当前迭代的 grasp/release 仍会执行（记录于架构文档 §16-⑪）。
 - ~~与 MATLAB 的对照：固定 fixture + 强制抓取结果 → 汇总 JSON 全字段一致~~（2026-10-04 精简：对照套件已移除，改由单元测试回归覆盖）。
 
 ---
@@ -219,8 +221,8 @@ gantt
 | `src/motion/moveToolFinal.m` | `core/sim/motion.py::move_tool_final` | |
 | `src/motion/raiseTool.m` | `core/sim/motion.py::raise_tool` | |
 | `src/motion/returnHome.m` | `core/sim/motion.py::return_home` | |
-| `src/motion/lowerTool.m` | `core/sim/motion.py::lower_tool` | **legacy，主循环未调用**；原实现参数错位 + 拼写错误（从未可用），Python 按语义实现修正版但不接入 |
-| `src/motion/lowerToolMoved.m` | `core/sim/motion.py::lower_tool_moved` | legacy，主循环未调用；原实现参数错位，同上处理 |
+| `src/motion/lowerTool.m` | ~~`core/sim/motion.py::lower_tool`~~ | **已删除**（2026-10-04 M2 检视）：原实现参数错位 + 拼写错误（从未可用）、主循环不调用，修正版 Python 移植无调用方 |
+| `src/motion/lowerToolMoved.m` | ~~`core/sim/motion.py::lower_tool_moved`~~ | 同上（已删除） |
 | `src/motion/initializeMotionLog.m` | `core/sim/motion_log.py::MotionLog` | |
 | `src/motion/recordToolMotion.m` | `core/sim/motion_log.py::record_tool_motion` | ZYX + 万向锁分支 |
 | `src/grasping/graspEmbryo.m` | `core/sim/grasping.py::grasp` | attempts 先自增 |
