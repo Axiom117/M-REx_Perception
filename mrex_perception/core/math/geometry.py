@@ -1,7 +1,7 @@
 """Image pixel -> workspace coordinate mapping.
 
 Port of ``src/setup/pixelToWorkspace.m``. Generic math helpers (rotations,
-poses) live in ``mrex_perception.core.math_ops``.
+poses) live in ``mrex_perception.core.math.transforms``.
 """
 
 from __future__ import annotations

@@ -7,11 +7,10 @@ import json
 import numpy as np
 import pytest
 
-from mrex_perception.core.math_ops import make_pose, rotation_z
-from mrex_perception.core.models import Embryo
-from mrex_perception.core.motion_log import MotionLog
-from mrex_perception.core.states import EmbryoState
-from mrex_perception.core.summary import compute_summary
+from mrex_perception.core.math import make_pose, rotation_z
+from mrex_perception.core.models import Embryo, EmbryoState
+from mrex_perception.core.reporting import compute_summary
+from mrex_perception.core.sim import MotionLog
 
 
 class _StubTool:

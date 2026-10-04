@@ -20,22 +20,22 @@ import numpy as np
 import pytest
 
 from mrex_perception.config.workspace import load_workspace
-from mrex_perception.core.embryos import mark_clustered
-from mrex_perception.core.grasping import grasp, release
-from mrex_perception.core.math_ops import rotation_z
-from mrex_perception.core.models import Embryo, ToolHead
-from mrex_perception.core.motion import (
+from mrex_perception.core.math import rotation_z
+from mrex_perception.core.models import Embryo, EmbryoState, ToolHead
+from mrex_perception.core.reporting import compute_summary
+from mrex_perception.core.setup import create_tool_head, mark_clustered
+from mrex_perception.core.sim import (
+    MotionLog,
+    grasp,
     move_tool,
     move_tool_final,
     move_tool_to_embryo,
+    next_moved_position,
     raise_tool,
+    release,
     return_home,
+    select_nearest_free,
 )
-from mrex_perception.core.motion_log import MotionLog
-from mrex_perception.core.planner import next_moved_position, select_nearest_free
-from mrex_perception.core.states import EmbryoState
-from mrex_perception.core.summary import compute_summary
-from mrex_perception.core.tool import create_tool_head
 
 TESTS_DIR = Path(__file__).resolve().parent
 TRACE_PATH = TESTS_DIR / "matlab" / "trace_m2.json"

@@ -112,19 +112,24 @@ M-REx_Perception/
 │   ├── __init__.py
 │   ├── __main__.py                   # 入口: python -m mrex_perception
 │   ├── main.py                       # QApplication 启动与依赖装配
-│   ├── core/                         # 【纯逻辑】不依赖 Qt/VTK
+│   ├── core/                         # 【纯逻辑】不依赖 Qt/VTK；按角色分层，依赖只向下
 │   │   ├── __init__.py
-│   │   ├── models.py                 # Workspace / Embryo / ToolHead / Snapshot
-│   │   ├── states.py                 # EmbryoState / ToolState 枚举（字符串值对齐 MATLAB）
-│   │   ├── geometry.py               # pixel_to_workspace 等坐标工具
-│   │   ├── math_ops.py               # 数学工具：rotation_z / make_pose（无域类型依赖）
-│   │   ├── embryos.py                # populate_random / from_detections / mark_clustered
-│   │   ├── tool.py                   # create_tool_head
-│   │   ├── planner.py                # has_free / select_nearest_free / next_moved_position
-│   │   ├── motion.py                 # move_tool / raise / lower / return_home ...
-│   │   ├── motion_log.py             # 运动记录（ZYX 欧拉角提取）
-│   │   ├── grasping.py               # pickup_probability / grasp / release
-│   │   ├── summary.py                # compute_summary（对应 simulationSummary.m）
+│   │   ├── math/                     # ① 纯函数：旋转/位姿变换 + 像素映射
+│   │   │   ├── transforms.py         # rotation_z / make_pose
+│   │   │   └── geometry.py           # pixel_to_workspace 等坐标映射
+│   │   ├── models/                   # ② 数据模型（子包 __init__ 转发导出）
+│   │   │   ├── states.py             # EmbryoState / ToolState 枚举（字符串值对齐 MATLAB）
+│   │   │   └── entities.py           # Workspace / Embryo / ToolHead / Snapshot
+│   │   ├── setup/                    # ③ 构造：配置/检测 → 实体
+│   │   │   ├── embryos.py            # populate_random / from_detections / mark_clustered
+│   │   │   └── tool.py               # create_tool_head
+│   │   ├── sim/                      # ④ 运行期行为
+│   │   │   ├── planner.py            # has_free / select_nearest_free / next_moved_position
+│   │   │   ├── motion.py             # move_tool / raise / lower / return_home ...
+│   │   │   ├── motion_log.py         # 运动记录（ZYX 欧拉角提取）
+│   │   │   └── grasping.py           # pickup_probability / grasp / release
+│   │   ├── reporting/                # ⑤ 结果输出
+│   │   │   └── summary.py            # compute_summary（对应 simulationSummary.m）
 │   │   └── engine.py                 # SimulationEngine：主循环 + 停止/暂停令牌
 │   ├── detection/                    # 【可插拔】胚胎来源
 │   │   ├── __init__.py
@@ -169,14 +174,16 @@ M-REx_Perception/
 ├── tests/
 │   ├── fixtures/                     # 场景 JSON（确定性输入，供双端对照）
 │   │   └── scenario_basic.json
-│   ├── matlab/                       # 【新增，可选】MATLAB 侧 dump 脚本
-│   │   └── dumpFixture.m
-│   ├── test_core_*.py                # 单元测试（pytest）
+│   ├── matlab/                       # 【新增】MATLAB 侧 parity dump（headless）
+│   │   ├── dumpFixture.m             # 跑冻结的 src/** 导出 trace_m2.json
+│   │   ├── updateSimulation.m        # 渲染阴影（no-op/录制，headless 用）
+│   │   └── trace_m2.json             # MATLAB 参考 trace（已入库）
+│   ├── test_*.py                     # 单元测试 + 双端对齐（pytest）
 │   └── tst2.m                        # 【保留】旧 MATLAB 测试
 └── pyproject.toml                    # 【新增】依赖与工具配置
 ```
 
-**说明**：包名 `mrex_perception` 与 MATLAB 中 "Tas（2026-10-01 由 `mrex` 更名而来）` 只需整体重命名一次，文档中不依赖包名语义。
+**说明**：包名 `mrex_perception`（2026-10-01 由 `mrex` 更名而来）与 MATLAB 工程 "TaskFlow" 命名并存；如需再次更名只需整体重命名一次，文档中不依赖包名语义。
 
 ---
 
@@ -279,7 +286,9 @@ home → aboveEmbryo → grasped | failedGrasp → aboveMovedPosition → releas
 
 ## 6. 计算核心模块
 
-### 6.1 `core/geometry.py`
+> 分层布局：`math` → `models` → `setup` → `sim` → `reporting`，依赖只向下；各子包 `__init__.py` 转发导出公开 API（跨子包引用一律走公开 API，如 `from mrex_perception.core.models import Embryo`）。`core/engine.py`（M3，顶层）负责编排 `sim` 中的行为。
+
+### 6.1 `core/math/geometry.py`
 
 ```python
 def pixel_to_workspace(x_pixel, y_pixel, image_width, image_height, workspace) -> np.ndarray:
@@ -289,13 +298,13 @@ def pixel_to_workspace(x_pixel, y_pixel, image_width, image_height, workspace) -
     return np.array([x, y, 0.1])
 ```
 
-### 6.2 `core/embryos.py`
+### 6.2 `core/setup/embryos.py`
 
 - `populate_random(count, workspace, rng, min_spacing=1.0)`：源区域内均匀采样，与已放置胚距离 ≥ `min_spacing`（最多 1000 次尝试，超限取最后候选——对齐 MATLAB 的 best-effort 行为）。
 - `from_detections(records, workspace)`：置信度过滤 `≥ 0.8`；`yaw = -theta`；空结果返回 `[]` 并告警。
 - `mark_clustered(embryos, threshold=1.0)`：两两距离（仅 xy 平面）< 1 mm 时双方 `is_clustered=True`、`state="clustered"`（注意：与 MATLAB 相同，无条件覆盖 state）。
 
-### 6.3 `core/planner.py`
+### 6.3 `core/sim/planner.py`
 
 - `has_free_embryos(embryos) -> bool`
 - `select_nearest_free(embryos, target_point)`：对 `free` 状态按 3D 距离取最近（`target_point` 默认 `[50, 50, 0.1]`，仅用于排序）。
@@ -314,7 +323,7 @@ z = embryo.height/2                                  # 0.1 mm
 
 边界：`y + spacing/2 > y_start + region_height` → 抛"落位区满"错误；`num_cols < 1` → 抛错。
 
-### 6.4 `core/motion.py`（核心：`move_tool`）
+### 6.4 `core/sim/motion.py`（核心：`move_tool`）
 
 语义（逐行对齐 `moveTool.m`）：
 
@@ -350,7 +359,7 @@ tool.target_position = target_position
 
 > Python 版 `move_tool` 以 `on_step` 回调 + `stop_token` 参数替代 MATLAB 中直接调用 `updateSimulation` / `simulationStopped`，保证 core 零 UI 依赖。
 
-### 6.5 `core/grasping.py`
+### 6.5 `core/sim/grasping.py`
 
 ```text
 pickup_probability(embryo):
@@ -375,11 +384,11 @@ release(embryos, tool, moved_position, pump):
     tool.has_embryo=False; attached_id=0; state="released"
 ```
 
-### 6.6 `core/motion_log.py`
+### 6.6 `core/sim/motion_log.py`
 
 `record_tool_motion(tool)`：ZYX 提取 roll/pitch/yaw，含 `|cos(pitch)| ≤ 1e-8` 时的万向锁回退分支（逐行对齐）。追加 `positions/rotation/tool_state`。
 
-### 6.7 `core/summary.py`
+### 6.7 `core/reporting/summary.py`
 
 `compute_summary(embryos, motion_log) -> SummaryReport`，字段与 `simulationSummary.m` 输出**一一对应**（UI 表格/导出 JSON 复用同一数据类）：
 

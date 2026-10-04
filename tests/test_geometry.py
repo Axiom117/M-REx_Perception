@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 
 from mrex_perception.config.workspace import load_workspace
-from mrex_perception.core.geometry import pixel_to_workspace
+from mrex_perception.core.math import pixel_to_workspace
 
 
 @pytest.fixture()

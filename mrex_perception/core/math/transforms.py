@@ -1,8 +1,7 @@
-"""Mathematical operations shared across the core layer.
+"""Rigid transforms shared across the core layer (rotation_z / make_pose).
 
-Pure math only: no domain types (Workspace / Embryo / ...) are imported here,
-so every module can depend on it. Domain-specific coordinate mapping
-(pixel -> workspace) stays in ``mrex_perception.core.geometry``.
+Pure math only: no domain types (Workspace / Embryo / ...) are imported here.
+The pixel -> workspace mapping stays in ``mrex_perception.core.math.geometry``.
 """
 
 from __future__ import annotations

@@ -6,14 +6,13 @@ import numpy as np
 import pytest
 
 from mrex_perception.config.workspace import load_workspace
-from mrex_perception.core.models import Embryo
-from mrex_perception.core.planner import (
+from mrex_perception.core.models import Embryo, EmbryoState
+from mrex_perception.core.sim import (
     has_free_embryos,
     next_moved_position,
     select_embryo,
     select_nearest_free,
 )
-from mrex_perception.core.states import EmbryoState
 
 TARGET = np.array([50.0, 50.0, 0.1])
 

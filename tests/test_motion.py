@@ -5,9 +5,10 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from mrex_perception.core.math_ops import rotation_z
-from mrex_perception.core.models import Embryo, ToolHead
-from mrex_perception.core.motion import (
+from mrex_perception.core.math import rotation_z
+from mrex_perception.core.models import Embryo, EmbryoState, ToolHead, ToolState
+from mrex_perception.core.sim import (
+    MotionLog,
     lower_tool,
     lower_tool_moved,
     move_tool,
@@ -16,8 +17,6 @@ from mrex_perception.core.motion import (
     raise_tool,
     return_home,
 )
-from mrex_perception.core.motion_log import MotionLog
-from mrex_perception.core.states import EmbryoState, ToolState
 
 START = np.array([15.0, 17.5, 10.0])
 

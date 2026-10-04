@@ -6,7 +6,7 @@ mirrors ``src/setup/loadWorkspaceConfig.m``: all 11 fields are required and
 ``size`` / ``sourceregion`` / ``movedregion`` must hold 3 / 4 / 4 values.
 YAML keys stay camelCase so the same files remain readable by the MATLAB
 reference implementation. Python attribute names are snake_case (see
-``mrex_perception.core.models.Workspace``).
+``mrex_perception.core.models.entities.Workspace``).
 """
 
 from __future__ import annotations

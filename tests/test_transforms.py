@@ -5,7 +5,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from mrex_perception.core.math_ops import make_pose, rotation_z
+from mrex_perception.core.math import make_pose, rotation_z
 
 
 def test_rotation_z_conventions() -> None:

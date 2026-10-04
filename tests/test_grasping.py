@@ -5,10 +5,9 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from mrex_perception.core.grasping import grasp, pickup_probability, release
-from mrex_perception.core.math_ops import rotation_z
-from mrex_perception.core.models import Embryo, ToolHead
-from mrex_perception.core.states import EmbryoState, ToolState
+from mrex_perception.core.math import rotation_z
+from mrex_perception.core.models import Embryo, EmbryoState, ToolHead, ToolState
+from mrex_perception.core.sim import grasp, pickup_probability, release
 
 
 class _FixedRng:

@@ -16,9 +16,8 @@ from typing import Any
 
 import numpy as np
 
-from mrex_perception.core.models import Embryo
-from mrex_perception.core.motion_log import MotionLog
-from mrex_perception.core.states import EmbryoState
+from mrex_perception.core.models import Embryo, EmbryoState
+from mrex_perception.core.sim import MotionLog
 
 _MOTION_EPS = 1e-9
 

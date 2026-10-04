@@ -13,7 +13,7 @@
 | 阶段 | 内容 | 交付物 | 验收标准 | 参考工作量* |
 |---|---|---|---|---|
 | **M0** | 环境与骨架 | pyproject、`mrex_perception` 包骨架、启动空窗口 | `python -m mrex_perception` 弹出含三视图空窗口；依赖可导入 | 0.5–1 天 |
-| **M1** | 核心数据与配置 | `core/models`、`config/workspace`、`core/embryos`、`geometry` | 单元测试绿；随机布置/聚类/pixel 映射与 MATLAB 对照通过 | 1–1.5 天 |
+| **M1** | 核心数据与配置 | `core/models`、`config/workspace`、`core/setup`、`core/math` | 单元测试绿；随机布置/聚类/pixel 映射与 MATLAB 对照通过 | 1–1.5 天 |
 | **M2** | 运动·抓取·记录·汇总 | `core/motion`、`grasping`、`motion_log`、`summary`、`planner` | 固定 fixture 与 MATLAB 逐字段对齐（容差 1e-9） | 1.5–2 天 |
 | **M3** | 无头仿真引擎 | `core/engine` + CLI（`python -m mrex_perception.cli run`） | 端到端随机仿真跑通并输出 JSON 汇总；停止语义正确 | 1 天 |
 | **M4** | GUI（MVP 关键路径） | 三视图 + 仪表盘 + worker 线程 | 6 胚仿真 ≥50 FPS 无卡顿；Stop ≤200 ms；运行中可安全关窗 | 2–3 天 |
@@ -73,12 +73,12 @@ gantt
 
 ### 任务清单
 
-- [x] `core/states.py`：`EmbryoState` / `ToolState` 枚举，字符串值与 MATLAB 完全一致
-- [x] `core/models.py`：`Workspace`、`Embryo`、`ToolHead` 数据类（字段表见架构文档 §5）
+- [x] `core/models/states.py`：`EmbryoState` / `ToolState` 枚举，字符串值与 MATLAB 完全一致
+- [x] `core/models/entities.py`：`Workspace`、`Embryo`、`ToolHead` 数据类（字段表见架构文档 §5）
 - [x] `config/workspace.py`：PyYAML + pydantic 加载 `config/workspace/default.yaml`（**字段名不改**），校验规则对齐 `loadWorkspaceConfig.m`
-- [x] `core/geometry.py`：`pixel_to_workspace`（已与 MATLAB 逐位对照：6 样例 `%.17g` 完全一致）
-- [x] `core/embryos.py`：`populate_random`、`from_detections`（先用手造 CSV/记录测试）、`mark_clustered`
-- [x] `core/tool.py`：`create_tool_head`（含初始位置 `[15, 17.5, 10]` 的推导式）
+- [x] `core/math/geometry.py`：`pixel_to_workspace`（已与 MATLAB 逐位对照：6 样例 `%.17g` 完全一致）
+- [x] `core/setup/embryos.py`：`populate_random`、`from_detections`（先用手造 CSV/记录测试）、`mark_clustered`
+- [x] `core/setup/tool.py`：`create_tool_head`（含初始位置 `[15, 17.5, 10]` 的推导式）
 - [x] `tests/fixtures/scenario_basic.json`：固定工作区 + 固定 6 胚（位置/朝向/attempts 全部显式）
 - [x] 单元测试：`test_workspace.py`、`test_embryos.py`、`test_geometry.py`、`test_tool.py`（29 用例全绿）
 
@@ -95,13 +95,13 @@ gantt
 
 ### 任务清单
 
-- [x] `core/motion_log.py`：`MotionLog` + `record_tool_motion`（ZYX 提取 + 万向锁分支）
-- [x] `core/motion.py`：`move_tool`（最短角插值、胚随动、`on_step` 回调、`stop_token`）
-- [x] `core/motion.py`：`move_tool_to_embryo` / `move_tool_final` / `raise_tool` / `return_home`
-- [x] `core/motion.py`：`lower_tool` / `lower_tool_moved`（legacy，仅移植不接入）
-- [x] `core/planner.py`：`has_free_embryos` / `select_nearest_free` / `select_embryo` / `next_moved_position`
-- [x] `core/grasping.py`：`pickup_probability` / `grasp` / `release`（RNG 与 Pump 注入）
-- [x] `core/summary.py`：`compute_summary` → `SummaryReport`（字段对齐 `simulationSummary.m`）
+- [x] `core/sim/motion_log.py`：`MotionLog` + `record_tool_motion`（ZYX 提取 + 万向锁分支）
+- [x] `core/sim/motion.py`：`move_tool`（最短角插值、胚随动、`on_step` 回调、`stop_token`）
+- [x] `core/sim/motion.py`：`move_tool_to_embryo` / `move_tool_final` / `raise_tool` / `return_home`
+- [x] `core/sim/motion.py`：`lower_tool` / `lower_tool_moved`（legacy，仅移植不接入）
+- [x] `core/sim/planner.py`：`has_free_embryos` / `select_nearest_free` / `select_embryo` / `next_moved_position`
+- [x] `core/sim/grasping.py`：`pickup_probability` / `grasp` / `release`（RNG 与 Pump 注入）
+- [x] `core/reporting/summary.py`：`compute_summary` → `SummaryReport`（字段对齐 `simulationSummary.m`）
 - [x] `tests/matlab/dumpFixture.m`：MATLAB 侧读同一 fixture、跑同一函数、导出 JSON（输出 `trace_m2.json` 已入库；headless 渲染阴影见 `tests/matlab/updateSimulation.m`）
 - [x] 单元测试：`test_motion.py`、`test_grasping.py`、`test_planner.py`、`test_summary.py`（另含 `test_motion_log.py`、`test_parity.py`）
 
@@ -202,31 +202,31 @@ gantt
 | `runSimulation.m`（主脚本） | `core/engine.py` + `main.py` + `ui/main_window.py` | 主循环拆为引擎；脚本级配置变为 `EngineParams` + UI |
 | `src/setup/createWorkspace.m` | `config/workspace.py::load_workspace` | |
 | `src/setup/loadWorkspaceConfig.m` | `config/workspace.py`（pydantic 校验） | 含 readSimpleYaml → 换 PyYAML |
-| `src/setup/populateEmbryos.m` | `core/embryos.py::populate_random` | RNG 注入 |
-| `src/setup/createEmbryoFromYOLO.m` | `core/embryos.py::from_detections` | 置信度 0.8 过滤 |
-| `src/setup/pixelToWorkspace.m` | `core/geometry.py::pixel_to_workspace` | |
-| `src/setup/createToolHead.m` | `core/tool.py::create_tool_head` | |
+| `src/setup/populateEmbryos.m` | `core/setup/embryos.py::populate_random` | RNG 注入 |
+| `src/setup/createEmbryoFromYOLO.m` | `core/setup/embryos.py::from_detections` | 置信度 0.8 过滤 |
+| `src/setup/pixelToWorkspace.m` | `core/math/geometry.py::pixel_to_workspace` | |
+| `src/setup/createToolHead.m` | `core/setup/tool.py::create_tool_head` | |
 | `src/detection/detectEmbryos.m` | `detection/base.py` + `detection/yolo.py`（占位） | |
 | `src/detection/runYOLO.m` | `detection/yolo.py::run_extraction`（M5） | 子进程 + CSV |
-| `src/detection/detectClusteredEmbryos.m` | `core/embryos.py::mark_clustered` | 阈值 1 mm（2D） |
-| `src/planning/hasFreeEmbryos.m` | `core/planner.py::has_free_embryos` | |
-| `src/planning/selectNearEmbryo.m` | `core/planner.py::select_nearest_free` | |
-| `src/planning/selectEmbryos.m` | `core/planner.py::select_embryo` | 先清 selected 再置新 |
-| `src/planning/getMovedPosition.m` | `core/planner.py::next_moved_position` | 网格公式 + 容量报错 |
-| `src/planning/pickupModel.m` | `core/grasping.py::pickup_probability` | |
-| `src/motion/moveTool.m` | `core/motion.py::move_tool` | `on_step` 回调、stop token |
-| `src/motion/moveToolToEmbryo.m` | `core/motion.py::move_tool_to_embryo` | |
-| `src/motion/moveToolFinal.m` | `core/motion.py::move_tool_final` | |
-| `src/motion/raiseTool.m` | `core/motion.py::raise_tool` | |
-| `src/motion/returnHome.m` | `core/motion.py::return_home` | |
-| `src/motion/lowerTool.m` | `core/motion.py::lower_tool` | **legacy，主循环未调用**；原实现参数错位 + 拼写错误（从未可用），Python 按语义实现修正版但不接入 |
-| `src/motion/lowerToolMoved.m` | `core/motion.py::lower_tool_moved` | legacy，主循环未调用；原实现参数错位，同上处理 |
-| `src/motion/initializeMotionLog.m` | `core/motion_log.py::MotionLog` | |
-| `src/motion/recordToolMotion.m` | `core/motion_log.py::record_tool_motion` | ZYX + 万向锁分支 |
-| `src/grasping/graspEmbryo.m` | `core/grasping.py::grasp` | attempts 先自增 |
-| `src/grasping/releaseEmbryo.m` | `core/grasping.py::release` | 固定 yaw=π/2 |
+| `src/detection/detectClusteredEmbryos.m` | `core/setup/embryos.py::mark_clustered` | 阈值 1 mm（2D） |
+| `src/planning/hasFreeEmbryos.m` | `core/sim/planner.py::has_free_embryos` | |
+| `src/planning/selectNearEmbryo.m` | `core/sim/planner.py::select_nearest_free` | |
+| `src/planning/selectEmbryos.m` | `core/sim/planner.py::select_embryo` | 先清 selected 再置新 |
+| `src/planning/getMovedPosition.m` | `core/sim/planner.py::next_moved_position` | 网格公式 + 容量报错 |
+| `src/planning/pickupModel.m` | `core/sim/grasping.py::pickup_probability` | |
+| `src/motion/moveTool.m` | `core/sim/motion.py::move_tool` | `on_step` 回调、stop token |
+| `src/motion/moveToolToEmbryo.m` | `core/sim/motion.py::move_tool_to_embryo` | |
+| `src/motion/moveToolFinal.m` | `core/sim/motion.py::move_tool_final` | |
+| `src/motion/raiseTool.m` | `core/sim/motion.py::raise_tool` | |
+| `src/motion/returnHome.m` | `core/sim/motion.py::return_home` | |
+| `src/motion/lowerTool.m` | `core/sim/motion.py::lower_tool` | **legacy，主循环未调用**；原实现参数错位 + 拼写错误（从未可用），Python 按语义实现修正版但不接入 |
+| `src/motion/lowerToolMoved.m` | `core/sim/motion.py::lower_tool_moved` | legacy，主循环未调用；原实现参数错位，同上处理 |
+| `src/motion/initializeMotionLog.m` | `core/sim/motion_log.py::MotionLog` | |
+| `src/motion/recordToolMotion.m` | `core/sim/motion_log.py::record_tool_motion` | ZYX + 万向锁分支 |
+| `src/grasping/graspEmbryo.m` | `core/sim/grasping.py::grasp` | attempts 先自增 |
+| `src/grasping/releaseEmbryo.m` | `core/sim/grasping.py::release` | 固定 yaw=π/2 |
 | `src/hardware/releaseWithPump.m` | `hardware/serial_pump.py::dispense/withdraw`（M6） | rate=20, vol=2.7 |
-| `src/reporting/simulationSummary.m` | `core/summary.py::compute_summary` | 输出格式化移到呈现层 |
+| `src/reporting/simulationSummary.m` | `core/reporting/summary.py::compute_summary` | 输出格式化移到呈现层 |
 | `src/visualization/plotEmbryos3D.m` | `ui/renderer.py::build_embryo_mesh` | |
 | `src/visualization/plotToolHead3D.m` | `ui/renderer.py::build_tool_mesh` | |
 | `src/visualization/updateSimulation.m` | `ui/viewport.py::apply_snapshot` | 不再全量 `clf` |

@@ -6,10 +6,10 @@ import numpy as np
 import pytest
 
 from mrex_perception.config.workspace import load_workspace
-from mrex_perception.core.math_ops import make_pose, rotation_z
-from mrex_perception.core.motion_log import MotionLog, extract_zyx_angles, record_tool_motion
-from mrex_perception.core.states import ToolState
-from mrex_perception.core.tool import create_tool_head
+from mrex_perception.core.math import make_pose, rotation_z
+from mrex_perception.core.models import ToolState
+from mrex_perception.core.setup import create_tool_head
+from mrex_perception.core.sim import MotionLog, extract_zyx_angles, record_tool_motion
 
 
 class _StubTool:

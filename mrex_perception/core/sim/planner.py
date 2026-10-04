@@ -12,8 +12,7 @@ import warnings
 import numpy as np
 from numpy.typing import ArrayLike
 
-from mrex_perception.core.models import Embryo, Workspace
-from mrex_perception.core.states import EmbryoState
+from mrex_perception.core.models import Embryo, EmbryoState, Workspace
 
 
 def has_free_embryos(embryos: list[Embryo]) -> bool:

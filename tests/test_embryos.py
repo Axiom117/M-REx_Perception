@@ -9,10 +9,9 @@ import numpy as np
 import pytest
 
 from mrex_perception.config.workspace import REQUIRED_FIELDS, WorkspaceConfig, load_workspace
-from mrex_perception.core.embryos import from_detections, mark_clustered, populate_random
-from mrex_perception.core.math_ops import rotation_z
-from mrex_perception.core.models import Embryo
-from mrex_perception.core.states import EmbryoState
+from mrex_perception.core.math import rotation_z
+from mrex_perception.core.models import Embryo, EmbryoState
+from mrex_perception.core.setup import from_detections, mark_clustered, populate_random
 
 FIXTURES_DIR = Path(__file__).resolve().parent / "fixtures"
 
