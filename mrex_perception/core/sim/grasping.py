@@ -16,6 +16,8 @@ import numpy as np
 from mrex_perception.core.math import rotation_z
 from mrex_perception.core.models import Embryo, EmbryoState, ToolHead, ToolState
 
+from .planner import find_selected
+
 
 class Pump(Protocol):
     """Minimal pump surface consumed by grasping (implemented in M6)."""
@@ -58,7 +60,7 @@ def grasp(
     embryo is ``failed`` at ``attempts >= 3``, otherwise ``free`` again. In
     hardware mode the pump is stopped before the attempt.
     """
-    selected = next((e for e in embryos if e.state == EmbryoState.SELECTED), None)
+    selected = find_selected(embryos)
     if selected is None:
         warnings.warn("No selected embryo found", stacklevel=2)
         return

@@ -1,15 +1,4 @@
-"""Tool motion interpolation (ports of ``src/motion/*.m``).
-
-``move_tool`` replaces the MATLAB couplings with injected hooks so the core
-layer stays UI-free: ``stop_token`` (checked once per interpolation step,
-mirroring ``simulationStopped``) and ``on_step`` (called after each sample is
-recorded, where MATLAB called ``updateSimulation``).
-
-All functions mutate ``embryos`` / ``tool`` in place and append to the passed
-``MotionLog``; MATLAB's value-based ``[embryos, tool, motionLog]`` returns
-become in-place updates. ID convention: ``tool.attached_embryo_id`` is 1-based
-and indexes ``embryos[id - 1]`` (migration plan §9.3).
-"""
+# Tool motion interpolation
 
 from __future__ import annotations
 
@@ -21,9 +10,10 @@ import numpy as np
 from numpy.typing import ArrayLike
 
 from mrex_perception.core.math import rotation_z
-from mrex_perception.core.models import Embryo, EmbryoState, ToolHead, ToolState
+from mrex_perception.core.models import Embryo, ToolHead, ToolState
 
 from .motion_log import MotionLog
+from .planner import find_selected
 
 
 class StopToken(Protocol):
@@ -44,10 +34,6 @@ def resolve_target_yaw(target_rotation: float | int | np.ndarray) -> float:
     if arr.shape == (3, 3):
         return float(np.arctan2(arr[1, 0], arr[0, 0]))
     raise ValueError("targetRotation must be a scalar yaw angle or a 3-by-3 rotation matrix.")
-
-
-def _find_selected(embryos: list[Embryo]) -> Embryo | None:
-    return next((e for e in embryos if e.state == EmbryoState.SELECTED), None)
 
 
 def move_tool(
@@ -115,7 +101,7 @@ def move_tool_to_embryo(
     on_step: Callable[[], None] | None = None,
 ) -> None:
     """Move above the selected embryo; set ``aboveEmbryo`` (``moveToolToEmbryo.m``)."""
-    selected = _find_selected(embryos)
+    selected = find_selected(embryos)
     if selected is None:
         warnings.warn("No selected embryo found", stacklevel=2)
         return
@@ -138,8 +124,8 @@ def move_tool_final(
     embryos: list[Embryo],
     tool: ToolHead,
     num_steps: int,
-    moved_position: ArrayLike,
     motion_log: MotionLog,
+    moved_position: ArrayLike,
     *,
     stop_token: StopToken | None = None,
     on_step: Callable[[], None] | None = None,

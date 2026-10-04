@@ -72,6 +72,27 @@ class ToolHead:
     max_velocity: float = 10.0
     path: list[np.ndarray] = field(default_factory=list)
 
+    @classmethod
+    def for_workspace(cls, workspace: Workspace) -> ToolHead:
+        """Build the adhesion tool head with its initial (home) position.
+
+        The initial position is derived from the source region:
+        ``[source_x / 2 + 15, source_y / 2 + 15, 10]`` -> ``[15, 17.5, 10]``
+        for the default config. Home and target position start at the same
+        point (port of ``src/setup/createToolHead.m``).
+        """
+        position = np.array(
+            [
+                workspace.source_region[0] / 2 + 15,
+                workspace.source_region[1] / 2 + 15,
+                10.0,
+            ]
+        )
+        tool = cls(position=position)
+        tool.home_position = position.copy()
+        tool.target_position = position.copy()
+        return tool
+
     @property
     def radius(self) -> float:
         """Cylinder radius (= diameter / 2, as in createToolHead.m)."""

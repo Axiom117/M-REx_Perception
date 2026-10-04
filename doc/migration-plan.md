@@ -78,7 +78,7 @@ gantt
 - [x] `config/workspace.py`：PyYAML + pydantic 加载 `config/workspace/default.yaml`（**字段名不改**），校验规则对齐 `loadWorkspaceConfig.m`
 - [x] `core/math/geometry.py`：`pixel_to_workspace`（已与 MATLAB 逐位对照：6 样例 `%.17g` 完全一致）
 - [x] `core/setup/embryos.py`：`populate_random`、`from_detections`（先用手造 CSV/记录测试）、`mark_clustered`
-- [x] `core/setup/tool.py`：`create_tool_head`（含初始位置 `[15, 17.5, 10]` 的推导式）
+- [x] `core/setup/tool.py`：`create_tool_head`（含初始位置 `[15, 17.5, 10]` 的推导式）【2026-10-04 并入 `core/models/entities.py::ToolHead.for_workspace`，`setup/tool.py` 删除】
 - [x] `tests/fixtures/scenario_basic.json`：固定工作区 + 固定 6 胚（位置/朝向/attempts 全部显式）【2026-10-04 精简移除】
 - [x] 单元测试：`tests/core/test_math.py`、`tests/core/test_setup.py`、`tests/test_config.py`（29 用例全绿；2026-10-04 按 core 分层重组，见 `tests/README.md`）
 
@@ -137,6 +137,8 @@ gantt
 - ✅ 全流程无 UI 依赖（`import mrex_perception.core` 实测不引入 PySide6/VTK/PyVista）。
 - ✅ Stop 语义：在任一插值步置停 → 插值循环立即 break，`FinishReason.STOPPED`、不回位、不产汇总（`summary=None`）。保真细节：检查点仅为主循环顶部 + 插值步内，故停止后当前迭代的 grasp/release 仍会执行（记录于架构文档 §16-⑪）。
 - ~~与 MATLAB 的对照：固定 fixture + 强制抓取结果 → 汇总 JSON 全字段一致~~（2026-10-04 精简：对照套件已移除，改由单元测试回归覆盖）。
+
+> **M3 检视与清理（2026-10-04）**：引擎 `_hooks()` 间接层改为 `_move()` 统一注入；删除 `LoggableTool` 协议与 `"unknown"` 状态兜底（`MotionLog.record` 只接收 `ToolHead`）；`find_selected` 归一至 `sim/planner.py`（motion 包装器与 grasp 共用）；`move_tool_final` 参数序与其余包装器对齐（`motion_log` 在 `moved_position` 前）；CLI 停止分支简化为 `summary is None` 判定。快照/停止语义与数值输出不变，50 用例全绿。
 
 ---
 
@@ -207,7 +209,7 @@ gantt
 | `src/setup/populateEmbryos.m` | `core/setup/embryos.py::populate_random` | RNG 注入 |
 | `src/setup/createEmbryoFromYOLO.m` | `core/setup/embryos.py::from_detections` | 置信度 0.8 过滤 |
 | `src/setup/pixelToWorkspace.m` | `core/math/geometry.py::pixel_to_workspace` | |
-| `src/setup/createToolHead.m` | `core/setup/tool.py::create_tool_head` | |
+| `src/setup/createToolHead.m` | `core/models/entities.py::ToolHead.for_workspace` | |
 | `src/detection/detectEmbryos.m` | `detection/base.py` + `detection/yolo.py`（占位） | |
 | `src/detection/runYOLO.m` | `detection/yolo.py::run_extraction`（M5） | 子进程 + CSV |
 | `src/detection/detectClusteredEmbryos.m` | `core/setup/embryos.py::mark_clustered` | 阈值 1 mm（2D） |

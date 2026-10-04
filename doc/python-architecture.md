@@ -119,10 +119,9 @@ M-REx_Perception/
 │   │   │   └── geometry.py           # pixel_to_workspace 等坐标映射
 │   │   ├── models/                   # ② 数据模型（子包 __init__ 转发导出）
 │   │   │   ├── states.py             # EmbryoState / ToolState 枚举（字符串值对齐 MATLAB）
-│   │   │   └── entities.py           # Workspace / Embryo / ToolHead / Snapshot
+│   │   │   └── entities.py           # Workspace / Embryo / ToolHead（for_workspace）/ Snapshot
 │   │   ├── setup/                    # ③ 构造：配置/检测 → 实体
-│   │   │   ├── embryos.py            # populate_random / from_detections / mark_clustered
-│   │   │   └── tool.py               # create_tool_head
+│   │   │   └── embryos.py            # populate_random / from_detections / mark_clustered
 │   │   ├── sim/                      # ④ 运行期行为
 │   │   │   ├── planner.py            # has_free / select_nearest_free / next_moved_position
 │   │   │   ├── motion.py             # move_tool / raise / lower / return_home ...
@@ -404,7 +403,7 @@ setup:
     workspace = load_workspace(config_name)
     embryos   = source.detect(...)          # random 或 yolo(占位)
     embryos   = mark_clustered(embryos)
-    tool      = create_tool_head(workspace)
+    tool      = injected_tool              # 必填(kw-only)注入；如 ToolHead.for_workspace(workspace)
     log       = MotionLog(); log.record(tool)
     emit(phase="Initial workspace")
 
@@ -440,7 +439,9 @@ return FinishReason.COMPLETED
 
 停止语义：`stop()` 置 `threading.Event`；`move_tool` 每个插值步检查（与 MATLAB 逐步检查一致），停止延迟 ≤ 1 步。
 
-> ✅ 2026-10-04（M3）：已实装于 `core/engine.py`（`SimulationEngine` / `EngineParams` / `Snapshot` / `FinishReason`）与 `mrex_perception/cli.py`。停止检查点与 MATLAB 完全一致（仅循环顶 + 插值步内），停后当前迭代的抓取/释放仍会执行（见 §16-⑪）；暂停/单步留待 M4 worker 在 `on_step` 钩子处阻塞实现。
+> ✅ 2026-10-04（M3）：已实装于 `core/engine.py`（`SimulationEngine` / `EngineParams` / `Snapshot` / `FinishReason`）与 `mrex_perception/cli.py`。停止检查点与 MATLAB 完全一致（仅循环顶 + 插值步内），停后当前迭代的抓取/释放仍会执行（见 §16-⑪）；暂停/单步留待 M4 worker 在 `on_step` 钩子处阻塞实现。构造器要求 keyword-only `tool` 注入（如 `ToolHead.for_workspace(workspace)`；实例原地使用，调用方负责初始化 `home_position`/`target_position`；缺省自建已移除）；`core/setup/tool.py` 已删，创建逻辑并入模型类方法。
+>
+> **M3 检视（2026-10-04）**：`_hooks()` 字典间接层改为 `_move()` 统一注入（删除 `typing.Any`）；`LoggableTool` 协议与 `getattr(..., "unknown")` 兜底删除，`MotionLog.record` 直接接收 `ToolHead`；选中胚查找统一为 `planner.find_selected`（motion/grasping 共用，行为同 MATLAB 首个匹配）；`move_tool_final` 参数序对齐为 `(embryos, tool, num_steps, motion_log, moved_position, ...)`；CLI 停止判定合并为单一 `summary is None` 分支。50 用例保持全绿。
 
 ---
 

@@ -20,7 +20,8 @@ from pathlib import Path
 import numpy as np
 
 from mrex_perception.config.workspace import load_workspace
-from mrex_perception.core.engine import EngineParams, FinishReason, SimulationEngine
+from mrex_perception.core.engine import EngineParams, SimulationEngine
+from mrex_perception.core.models import ToolHead
 from mrex_perception.core.reporting import SummaryReport
 from mrex_perception.core.setup import populate_random
 
@@ -127,16 +128,14 @@ def main(argv: list[str] | None = None) -> int:
             embryos,
             EngineParams(num_steps=args.steps, target_point=np.asarray(args.target, dtype=float)),
             rng=rng,
+            tool=ToolHead.for_workspace(workspace),
         )
         result = engine.run()
 
-        if result.finish_reason == FinishReason.STOPPED:
-            print("Simulation stopped before completion.")
-            return 1
-
         summary = result.summary
         if summary is None:
-            print("[error] completed run without a summary", file=sys.stderr)
+            # A stopped run ends without a summary (MATLAB semantics).
+            print("Simulation stopped before completion.")
             return 1
 
         print(format_summary_text(summary))

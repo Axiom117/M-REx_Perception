@@ -7,15 +7,10 @@ import json
 import numpy as np
 import pytest
 
-from mrex_perception.core.math import make_pose, rotation_z
-from mrex_perception.core.models import Embryo, EmbryoState
+from mrex_perception.core.math import rotation_z
+from mrex_perception.core.models import Embryo, EmbryoState, ToolHead
 from mrex_perception.core.reporting import compute_summary
 from mrex_perception.core.sim import MotionLog
-
-
-class _StubTool:
-    def __init__(self, pose: np.ndarray) -> None:
-        self.pose = pose
 
 
 def _embryo(
@@ -28,8 +23,7 @@ def _embryo(
 
 
 def _record(log: MotionLog, position: tuple[float, float, float], yaw: float = 0.0) -> None:
-    pose = make_pose(rotation_z(yaw), np.array(position, dtype=float))
-    log.record(_StubTool(pose))
+    log.record(ToolHead(position=np.array(position, dtype=float), orientation=rotation_z(yaw)))
 
 
 def test_counts_and_rates() -> None:

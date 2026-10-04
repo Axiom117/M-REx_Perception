@@ -20,7 +20,7 @@ from mrex_perception.core.engine import (
     Snapshot,
 )
 from mrex_perception.core.math import rotation_z
-from mrex_perception.core.models import Embryo, EmbryoState, ToolState, Workspace
+from mrex_perception.core.models import Embryo, EmbryoState, ToolHead, ToolState, Workspace
 from mrex_perception.core.setup import populate_random
 
 HOME = np.array([15.0, 17.5, 10.0])
@@ -40,6 +40,10 @@ def _workspace() -> Workspace:
     return load_workspace("default")
 
 
+def _tool() -> ToolHead:
+    return ToolHead.for_workspace(_workspace())
+
+
 def _free(i: int, x: float, y: float) -> Embryo:
     return Embryo(id=i, position=np.array([x, y, 0.1]), orientation=rotation_z(0.0))
 
@@ -48,7 +52,7 @@ def test_completed_random_run_is_self_consistent() -> None:
     workspace = _workspace()
     rng = np.random.default_rng(42)
     embryos = populate_random(6, workspace, rng)
-    engine = SimulationEngine(workspace, embryos, rng=rng)
+    engine = SimulationEngine(workspace, embryos, rng=rng, tool=_tool())
 
     result = engine.run()
 
@@ -72,7 +76,9 @@ def test_completed_random_run_is_self_consistent() -> None:
 def test_deterministic_fixture_run_places_embryos_on_grid() -> None:
     workspace = _workspace()
     embryos = [_free(i + 1, x, 10.0) for i, x in enumerate([2.0, 4.0, 6.0])]
-    engine = SimulationEngine(workspace, embryos, EngineParams(num_steps=4), rng=_FixedRng(0.0))
+    engine = SimulationEngine(
+        workspace, embryos, EngineParams(num_steps=4), rng=_FixedRng(0.0), tool=_tool()
+    )
 
     result = engine.run()
 
@@ -88,6 +94,25 @@ def test_deterministic_fixture_run_places_embryos_on_grid() -> None:
         assert embryo.orientation == pytest.approx(rotation_z(np.pi / 2), abs=1e-12)
 
 
+def test_injected_tool_is_used_in_place() -> None:
+    workspace = _workspace()
+    embryos = [_free(1, 6.0, 10.0)]
+    tool = ToolHead(position=np.array([20.0, 20.0, 12.0]), clearance=2.0)
+    tool.home_position = tool.position.copy()
+    tool.target_position = tool.position.copy()
+    engine = SimulationEngine(
+        workspace, embryos, EngineParams(num_steps=2), rng=_FixedRng(0.0), tool=tool
+    )
+
+    result = engine.run()
+
+    # the injected instance is mutated in place and returned as-is
+    assert result.tool is tool
+    assert result.motion_log.positions[0] == pytest.approx([20.0, 20.0, 12.0])
+    # approach target is embryo position + custom clearance -> [6, 10, 0.1 + 2.0]
+    assert result.motion_log.positions[2] == pytest.approx([6.0, 10.0, 2.1])
+
+
 def test_stop_mid_run_returns_stopped_without_home_or_summary() -> None:
     workspace = _workspace()
     embryos = [_free(1, 6.0, 10.0), _free(2, 4.0, 10.0)]
@@ -100,7 +125,12 @@ def test_stop_mid_run_returns_stopped_without_home_or_summary() -> None:
             holder[0].stop()
 
     engine = SimulationEngine(
-        workspace, embryos, EngineParams(), rng=_FixedRng(0.0), on_step=stop_after_seven_steps
+        workspace,
+        embryos,
+        EngineParams(),
+        rng=_FixedRng(0.0),
+        tool=_tool(),
+        on_step=stop_after_seven_steps,
     )
     holder.append(engine)
     result = engine.run()
@@ -119,7 +149,9 @@ def test_stop_mid_run_returns_stopped_without_home_or_summary() -> None:
 def test_moved_region_full_raises() -> None:
     workspace = replace(_workspace(), moved_region=np.array([80.0, 5.0, 2.0, 2.0]))
     embryos = [_free(1, 6.0, 10.0), _free(2, 4.0, 10.0)]
-    engine = SimulationEngine(workspace, embryos, EngineParams(num_steps=2), rng=_FixedRng(0.0))
+    engine = SimulationEngine(
+        workspace, embryos, EngineParams(num_steps=2), rng=_FixedRng(0.0), tool=_tool()
+    )
 
     with pytest.raises(ValueError, match="Moved region is full"):
         engine.run()
@@ -128,7 +160,9 @@ def test_moved_region_full_raises() -> None:
 def test_no_free_embryos_completes_with_empty_summary() -> None:
     workspace = _workspace()
     embryos = [_free(1, 5.0, 10.0), _free(2, 5.4, 10.0)]  # < 1 mm apart -> clustered
-    engine = SimulationEngine(workspace, embryos, EngineParams(num_steps=5), rng=_FixedRng(0.0))
+    engine = SimulationEngine(
+        workspace, embryos, EngineParams(num_steps=5), rng=_FixedRng(0.0), tool=_tool()
+    )
 
     result = engine.run()
 
@@ -153,6 +187,7 @@ def test_phase_and_step_hooks_emit_deep_copies() -> None:
         embryos,
         EngineParams(num_steps=3),
         rng=_FixedRng(0.0),
+        tool=_tool(),
         on_phase=phases.append,
         on_step=snapshots.append,
     )

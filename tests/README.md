@@ -8,7 +8,8 @@
 tests/
 ├── core/                # 与 mrex_perception/core 分层一一对应
 │   ├── test_math.py     # rotation_z / make_pose / pixel_to_workspace
-│   ├── test_setup.py    # 随机布置 / 检测转换 / 聚类 + 工具创建
+│   ├── test_models.py   # ToolHead.for_workspace 工厂 / pose
+│   ├── test_setup.py    # 随机布置 / 检测转换 / 聚类
 │   ├── test_motion.py   # move_tool 及包装函数 + MotionLog / ZYX 提取
 │   ├── test_planner.py  # 选择与落位网格
 │   ├── test_grasping.py # 抓取概率 / 成败路径 / 释放

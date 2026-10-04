@@ -10,16 +10,22 @@ from .motion import (
     resolve_target_yaw,
     return_home,
 )
-from .motion_log import LoggableTool, MotionLog, extract_zyx_angles
-from .planner import has_free_embryos, next_moved_position, select_embryo, select_nearest_free
+from .motion_log import MotionLog, extract_zyx_angles
+from .planner import (
+    find_selected,
+    has_free_embryos,
+    next_moved_position,
+    select_embryo,
+    select_nearest_free,
+)
 
 __all__ = [
-    "LoggableTool",
     "MotionLog",
     "Pump",
     "RngLike",
     "StopToken",
     "extract_zyx_angles",
+    "find_selected",
     "grasp",
     "has_free_embryos",
     "move_tool",

@@ -6,9 +6,8 @@ import numpy as np
 import pytest
 
 from mrex_perception.config.workspace import load_workspace
-from mrex_perception.core.math import make_pose, rotation_z
+from mrex_perception.core.math import rotation_z
 from mrex_perception.core.models import Embryo, EmbryoState, ToolHead, ToolState
-from mrex_perception.core.setup import create_tool_head
 from mrex_perception.core.sim import (
     MotionLog,
     extract_zyx_angles,
@@ -32,15 +31,6 @@ class _StopAfter:
     def is_set(self) -> bool:
         self.calls += 1
         return self.calls > self.allowed
-
-
-class _StubTool:
-    """Duck-typed tool exposing only ``pose`` / optional ``state``."""
-
-    def __init__(self, pose: np.ndarray, state: object = None) -> None:
-        self.pose = pose
-        if state is not None:
-            self.state = state
 
 
 # Ry(+-pi/2) literals for the gimbal-lock cases.
@@ -166,7 +156,7 @@ def test_move_tool_final() -> None:
     moved = np.array([81.0, 6.0, 0.1])
     log = MotionLog()
 
-    move_tool_final([embryo], tool, 10, moved, log)
+    move_tool_final([embryo], tool, 10, log, moved)
 
     assert len(log) == 10
     assert tool.state == ToolState.ABOVE_MOVED_POSITION
@@ -203,7 +193,7 @@ def test_wrappers_warn_when_target_missing() -> None:
     assert tool.state == ToolState.HOME
 
     with pytest.warns(UserWarning, match="Tool has no attached embryo"):
-        move_tool_final([], tool, 10, np.zeros(3), log)
+        move_tool_final([], tool, 10, log, np.zeros(3))
 
 
 # -- MotionLog recording / ZYX extraction -------------------------------------
@@ -216,16 +206,20 @@ def test_motion_log_recording() -> None:
     assert log.rotation.shape == (0, 3)
     assert log.tool_state.tolist() == []
 
-    pose = make_pose(rotation_z(0.4), np.array([1.0, 2.0, 3.0]))
-    log.record(_StubTool(pose, state="grasped"))
+    grasped = ToolHead(
+        position=np.array([1.0, 2.0, 3.0]),
+        orientation=rotation_z(0.4),
+        state=ToolState.GRASPED,
+    )
+    log.record(grasped)
     assert len(log) == 1
     assert log.positions.tolist() == [[1.0, 2.0, 3.0]]
     np.testing.assert_allclose(log.rotation, [[0.0, 0.0, 0.4]], rtol=0, atol=1e-12)
     assert log.tool_state.tolist() == ["grasped"]
 
-    log.record(_StubTool(np.eye(4)))  # missing state -> "unknown"
-    log.record(create_tool_head(load_workspace("default")))
-    assert log.tool_state.tolist() == ["grasped", "unknown", "home"]
+    log.record(ToolHead())  # default pose (origin, identity) and state -> "home"
+    log.record(ToolHead.for_workspace(load_workspace("default")))
+    assert log.tool_state.tolist() == ["grasped", "home", "home"]
 
 
 def test_extract_zyx_angles() -> None:
@@ -239,7 +233,7 @@ def test_extract_zyx_angles() -> None:
 
 def test_move_yaw_changes_and_to_dict() -> None:
     log = MotionLog()
-    log.record(_StubTool(make_pose(np.eye(3), np.array([1.0, 0.0, 0.0]))))
+    log.record(ToolHead(position=np.array([1.0, 0.0, 0.0])))
     log.record_move_yaw_change(0.25)
     log.record_move_yaw_change(0.5)
     assert log.move_yaw_changes.tolist() == [0.25, 0.5]
@@ -247,5 +241,5 @@ def test_move_yaw_changes_and_to_dict() -> None:
     data = log.to_dict()
     assert data["positions"] == [[1.0, 0.0, 0.0]]
     assert data["rotation"] == [[0.0, 0.0, 0.0]]
-    assert data["tool_state"] == ["unknown"]
+    assert data["tool_state"] == ["home"]
     assert data["move_yaw_changes"] == [0.25, 0.5]

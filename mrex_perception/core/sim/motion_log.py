@@ -18,16 +18,11 @@ lists internally (O(1) appends) and exposed as fresh numpy arrays.
 
 from __future__ import annotations
 
-from typing import Any, Protocol
+from typing import Any
 
 import numpy as np
 
-
-class LoggableTool(Protocol):
-    """Anything exposing a 4x4 ``pose`` (``ToolHead`` or a lightweight test stub)."""
-
-    @property
-    def pose(self) -> np.ndarray: ...
+from mrex_perception.core.models import ToolHead
 
 
 def extract_zyx_angles(rotation: np.ndarray) -> np.ndarray:
@@ -59,17 +54,12 @@ class MotionLog:
     def __len__(self) -> int:
         return len(self._positions)
 
-    def record(self, tool: LoggableTool) -> None:
-        """Append one sample (port of ``recordToolMotion.m``).
-
-        Position and rotation are read from ``tool.pose`` exactly like MATLAB;
-        a missing ``state`` attribute is recorded as ``"unknown"``.
-        """
+    def record(self, tool: ToolHead) -> None:
+        """Append one sample (port of ``recordToolMotion.m``)."""
         pose = np.asarray(tool.pose, dtype=float)
         self._positions.append(pose[:3, 3].copy())
         self._rotation.append(extract_zyx_angles(pose[:3, :3]))
-        state = getattr(tool, "state", "unknown")
-        self._tool_state.append(str(state))
+        self._tool_state.append(str(tool.state))
 
     def record_move_yaw_change(self, magnitude: float) -> None:
         """Append one |shortest yaw delta| (radians), as ``moveTool.m`` does."""

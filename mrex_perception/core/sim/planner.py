@@ -20,6 +20,16 @@ def has_free_embryos(embryos: list[Embryo]) -> bool:
     return any(e.state == EmbryoState.FREE for e in embryos)
 
 
+def find_selected(embryos: list[Embryo]) -> Embryo | None:
+    """First ``selected`` embryo in list order, or ``None`` when there is none.
+
+    MATLAB performs the same search (first match, then ``break``) in
+    ``moveToolToEmbryo.m`` and ``graspEmbryo.m``; shared by the motion
+    wrappers and grasp here.
+    """
+    return next((e for e in embryos if e.state == EmbryoState.SELECTED), None)
+
+
 def select_nearest_free(embryos: list[Embryo], target_point: ArrayLike) -> list[Embryo]:
     """Select the free embryo nearest to ``target_point`` (``selectNearEmbryo.m``).
 
