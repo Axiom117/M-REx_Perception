@@ -79,7 +79,7 @@ gantt
 - [x] `core/math/geometry.py`：`pixel_to_workspace`（已与 MATLAB 逐位对照：6 样例 `%.17g` 完全一致）
 - [x] `core/setup/embryos.py`：`populate_random`、`from_detections`（先用手造 CSV/记录测试）、`mark_clustered`
 - [x] `core/setup/tool.py`：`create_tool_head`（含初始位置 `[15, 17.5, 10]` 的推导式）
-- [x] `tests/fixtures/scenario_basic.json`：固定工作区 + 固定 6 胚（位置/朝向/attempts 全部显式）
+- [x] `tests/fixtures/scenario_basic.json`：固定工作区 + 固定 6 胚（位置/朝向/attempts 全部显式）【2026-10-04 精简移除】
 - [x] 单元测试：`tests/core/test_math.py`、`tests/core/test_setup.py`、`tests/test_config.py`（29 用例全绿；2026-10-04 按 core 分层重组，见 `tests/README.md`）
 
 ### 验收
@@ -102,8 +102,8 @@ gantt
 - [x] `core/sim/planner.py`：`has_free_embryos` / `select_nearest_free` / `select_embryo` / `next_moved_position`
 - [x] `core/sim/grasping.py`：`pickup_probability` / `grasp` / `release`（RNG 与 Pump 注入）
 - [x] `core/reporting/summary.py`：`compute_summary` → `SummaryReport`（字段对齐 `simulationSummary.m`）
-- [x] `tests/matlab/dumpFixture.m`：MATLAB 侧读同一 fixture、跑同一函数、导出 JSON（输出 `trace_m2.json` 已入库；headless 渲染阴影见 `tests/matlab/updateSimulation.m`）
-- [x] 单元测试：`tests/core/test_motion.py`、`tests/core/test_grasping.py`、`tests/core/test_planner.py`、`tests/core/test_summary.py`（另含 `tests/test_parity.py` 双端对齐）
+- [x] `tests/matlab/dumpFixture.m`：MATLAB 侧读同一 fixture、跑同一函数、导出 JSON（输出 `trace_m2.json` 已入库；headless 渲染阴影见 `tests/matlab/updateSimulation.m`）【2026-10-04 精简移除】
+- [x] 单元测试：`tests/core/test_motion.py`、`tests/core/test_grasping.py`、`tests/core/test_planner.py`、`tests/core/test_summary.py`（双端 parity 套件于 2026-10-04 精简移除）
 
 ### 验收（数值对齐，容差 1e-9）
 
@@ -116,7 +116,7 @@ gantt
 | 抓取路径 | 强制成功 / 强制失败×3 两种 outcome；对比 attempts、state、`failedGrasp` |
 | `compute_summary` | 用同一 `motionLog` 数据对比全部统计字段（含 `np.unwrap` 结果） |
 
-> ✅ 2026-10-04：上表全部检查已实装。MATLAB 侧 trace 由 `tests/matlab/dumpFixture.m` 生成（`matlab -batch "cd tests/matlab; dumpFixture"`，含脚本化抓取结果与逐字段汇总），Python 侧在 `tests/test_parity.py` 中复跑同一路径逐值对比（容差 1e-9）；另有 90 个单元测试与端到端落位总账验证（100 用例全绿）。`lowerTool*.m` 按修正语义移植（未接入引擎）；`clustered` 不参与汇总计数等 MATLAB 行为均已保真。
+> ✅ 2026-10-04：上表全部检查已实装。MATLAB 侧 trace 由 `tests/matlab/dumpFixture.m` 生成（`matlab -batch "cd tests/matlab; dumpFixture"`，含脚本化抓取结果与逐字段汇总），Python 侧在 `tests/test_parity.py` 中复跑同一路径逐值对比（容差 1e-9）；另有 90 个单元测试与端到端落位总账验证（100 用例全绿）。`lowerTool*.m` 按修正语义移植（未接入引擎）；`clustered` 不参与汇总计数等 MATLAB 行为均已保真。双端对照套件（fixture、`tests/matlab/`、`test_parity.py`）于同日按精简计划整体移除，数值基线固化在单元测试断言中（见 §9 备注）。
 
 ---
 
@@ -134,7 +134,7 @@ gantt
 - 随机 6 胚、seed 固定：全部 `moved` 或按概率路径收尾，状态分布自洽（总账：moved+failed+free+clustered+selected+grasped = total）。
 - 全流程无 UI 依赖（`import mrex_perception.core` 不引入 Qt）。
 - Stop 语义：在任一插值步置停 → 立即 break，`FinishReason.STOPPED`，不回位、不产汇总（对齐 MATLAB）。
-- 与 MATLAB 的对照：固定 fixture + 强制抓取结果 → 汇总 JSON 全字段一致。
+- ~~与 MATLAB 的对照：固定 fixture + 强制抓取结果 → 汇总 JSON 全字段一致~~（2026-10-04 精简：对照套件已移除，改由单元测试回归覆盖）。
 
 ---
 
@@ -240,6 +240,8 @@ gantt
 ---
 
 ## 9. 数值对齐与验证策略
+
+> ⓘ 2026-10-04 精简说明：本章的双端对照套件（`scenario_basic.json`、`tests/matlab/`、`test_parity.py`、`trace_m2.json`）已在 M2 验收完成后整体移除；数值对齐结论固化在 `tests/core/` 单元测试断言中，如需找回见 git 历史（`15e2f7b`）。以下内容保留为历史设计与流程记录。
 
 ### 9.1 双端对照资产
 

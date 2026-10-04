@@ -35,22 +35,14 @@ def _selected(i: int = 1, attempts: int = 0, width: float = 0.2) -> Embryo:
     return Embryo(id=i, state=EmbryoState.SELECTED, attempts=attempts, width=width)
 
 
-# -- pickup_probability ------------------------------------------------------
-
-
-def test_pickup_probability_formula() -> None:
+def test_pickup_probability() -> None:
     assert pickup_probability(Embryo(id=1)) == pytest.approx(0.7)
     assert pickup_probability(_selected(attempts=1)) == pytest.approx(0.65)
     assert pickup_probability(_selected(attempts=5)) == pytest.approx(0.45)
     assert pickup_probability(Embryo(id=1, width=0.1)) == pytest.approx(0.35)
-
-
-def test_pickup_probability_is_clamped() -> None:
+    # clamped to [0, 1]
     assert pickup_probability(Embryo(id=1, width=0.4)) == pytest.approx(1.0)
     assert pickup_probability(_selected(attempts=20)) == pytest.approx(0.0)
-
-
-# -- grasp -------------------------------------------------------------------
 
 
 def test_grasp_success() -> None:
@@ -67,12 +59,11 @@ def test_grasp_success() -> None:
     assert tool.state == ToolState.GRASPED
 
 
-def test_grasp_failure_below_three_attempts_frees_embryo() -> None:
+def test_grasp_failure_paths() -> None:
+    # first failure: embryo goes back to free
     embryo = _selected(attempts=0)
     tool = ToolHead()
-
     grasp([embryo], tool, _FixedRng(1.0), None)
-
     assert embryo.attempts == 1
     assert embryo.state == EmbryoState.FREE
     assert not embryo.picked_successfully
@@ -80,24 +71,15 @@ def test_grasp_failure_below_three_attempts_frees_embryo() -> None:
     assert tool.attached_embryo_id == 0
     assert tool.state == ToolState.FAILED_GRASP
 
-
-def test_grasp_failure_third_attempt_fails_embryo() -> None:
+    # third failure: failed for good
     embryo = _selected(attempts=2)
-    tool = ToolHead()
-
     grasp([embryo], tool, _FixedRng(1.0), None)
-
     assert embryo.attempts == 3
     assert embryo.state == EmbryoState.FAILED
 
-
-def test_grasp_success_is_strict_less_than_probability() -> None:
-    # probability after increment is 0.7 - 0.05 = 0.65; draw equal -> failure
-    embryo = _selected(attempts=0)
-    tool = ToolHead()
-
+    # success test is strict `<`: a draw equal to the probability still fails
+    embryo = _selected(attempts=0)  # probability after increment = 0.7 - 0.05 = 0.65
     grasp([embryo], tool, _FixedRng(0.7 - 0.05), None)
-
     assert embryo.state == EmbryoState.FREE
     assert tool.state == ToolState.FAILED_GRASP
 
@@ -123,17 +105,15 @@ def test_grasp_stops_pump_first_in_hardware_mode() -> None:
     assert pump.calls == [("stop", None)]
 
 
-# -- release -----------------------------------------------------------------
-
-
-def test_release_resets_embryo_and_tool() -> None:
+def test_release() -> None:
     other = _selected(i=1)
     embryo = _selected(i=2, attempts=1)
     embryo.state = EmbryoState.GRASPED
     tool = ToolHead(has_embryo=True, attached_embryo_id=2, state=ToolState.GRASPED)
     moved = np.array([81.0, 6.0, 0.1])
+    pump = _RecordingPump()
 
-    release([other, embryo], tool, moved, None)
+    release([other, embryo], tool, moved, pump)  # hardware mode dispenses 2.7
 
     assert embryo.state == EmbryoState.MOVED
     assert embryo.position == pytest.approx(moved)
@@ -141,23 +121,10 @@ def test_release_resets_embryo_and_tool() -> None:
     assert not tool.has_embryo
     assert tool.attached_embryo_id == 0
     assert tool.state == ToolState.RELEASED
-
-
-def test_release_warns_without_attached_embryo() -> None:
-    tool = ToolHead()
-
-    with pytest.warns(UserWarning, match="No embryo attached"):
-        release([_selected()], tool, np.zeros(3), None)
-
-    assert tool.state == ToolState.HOME
-
-
-def test_release_dispenses_2_7_only_in_hardware_mode() -> None:
-    embryo = _selected(i=1)
-    embryo.state = EmbryoState.GRASPED
-    tool = ToolHead(has_embryo=True, attached_embryo_id=1)
-    pump = _RecordingPump()
-
-    release([embryo], tool, np.array([81.0, 6.0, 0.1]), pump)
-
     assert pump.calls == [("dispense", 2.7)]
+
+    # no attachment -> warn, unchanged
+    loose = ToolHead()
+    with pytest.warns(UserWarning, match="No embryo attached"):
+        release([_selected()], loose, np.zeros(3), None)
+    assert loose.state == ToolState.HOME

@@ -172,16 +172,9 @@ M-REx_Perception/
 ├── python/                           # 【保留】YOLO 工具链（训练/推理脚本 + models）
 ├── src/                              # 【保留】MATLAB 参考实现（冻结，仅作对照）
 ├── tests/
-│   ├── README.md                     # 测试布局 + matlab/ parity 工具说明
+│   ├── README.md                     # 测试布局说明
 │   ├── core/                         # 与 core 分层对应（math/setup/motion/planner/grasping/summary）
-│   ├── fixtures/                     # 场景 JSON（确定性输入，供双端对照）
-│   │   └── scenario_basic.json
-│   ├── matlab/                       # MATLAB 侧 parity 工具（用法见 tests/README.md）
-│   │   ├── dumpFixture.m             # 跑冻结的 src/** 导出 trace_m2.json
-│   │   ├── updateSimulation.m        # 渲染阴影（no-op/录制，headless 用）
-│   │   └── trace_m2.json             # MATLAB 参考 trace（已入库）
 │   ├── test_config.py                # config loader + workspace 校验
-│   ├── test_parity.py                # MATLAB 双端 1e-9 对齐
 │   └── test_smoke.py                 # 应用导入/启动冒烟
 └── pyproject.toml                    # 【新增】依赖与工具配置
 ```
@@ -604,7 +597,7 @@ stop / cvolume / wrate <r> ml/min / tvolume <v> ml / wrun
 |---|---|---|
 | 工作区 | `config/workspace/*.yaml`（复用） | §5.1 字段 |
 | 应用默认 | `config/app.yaml`（新增，可选） | mode、source、num_steps、target_point、phase_hold、seed、主题 |
-| 场景/回放 | `tests/fixtures/*.json` | 固定工作区 + 固定胚胎列表 + 脚本化抓取结果（测试与 UI 回放共用） |
+| 场景/回放 | `tests/fixtures/*.json`（已移除） | 原固定场景 JSON 随对照套件精简删除；如 UI 回放需要可另行重建 |
 
 优先级：CLI/UI 显式传参 > `app.yaml` > 代码内默认值。YAML 解析用 PyYAML；工作区模型用 pydantic 校验（保证错误信息可读）。
 

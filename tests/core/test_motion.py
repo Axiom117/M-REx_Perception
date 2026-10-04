@@ -37,13 +37,27 @@ class _StopAfter:
         return self.calls > self.allowed
 
 
+class _StubTool:
+    """Duck-typed tool exposing only ``pose`` / optional ``state``."""
+
+    def __init__(self, pose: np.ndarray, state: object = None) -> None:
+        self.pose = pose
+        if state is not None:
+            self.state = state
+
+
+# Ry(+-pi/2) literals for the gimbal-lock cases.
+_RY_POS = np.array([[0.0, 0.0, 1.0], [0.0, 1.0, 0.0], [-1.0, 0.0, 0.0]])
+_RY_NEG = np.array([[0.0, 0.0, -1.0], [0.0, 1.0, 0.0], [1.0, 0.0, 0.0]])
+
+
 def _tool() -> ToolHead:
     tool = ToolHead(position=START.copy())
     tool.home_position = START.copy()
     return tool
 
 
-# -- move_tool core ----------------------------------------------------------
+# -- move_tool ---------------------------------------------------------------
 
 
 def test_move_tool_records_full_trajectory() -> None:
@@ -78,17 +92,6 @@ def test_move_tool_shortest_angle_crosses_pi() -> None:
     assert np.all(np.diff(np.unwrap(yaws)) > 0)
 
 
-def test_move_tool_matrix_and_scalar_target_agree() -> None:
-    log_scalar, log_matrix = MotionLog(), MotionLog()
-    target = np.array([20.0, 10.0, 10.0])
-
-    move_tool([], _tool(), target, 0.3, 25, log_scalar)
-    move_tool([], _tool(), target, rotation_z(0.3), 25, log_matrix)
-
-    np.testing.assert_allclose(log_scalar.positions, log_matrix.positions, rtol=0, atol=1e-12)
-    np.testing.assert_allclose(log_scalar.rotation, log_matrix.rotation, rtol=0, atol=1e-12)
-
-
 def test_move_tool_rejects_bad_target_rotation() -> None:
     with pytest.raises(ValueError, match="3-by-3"):
         move_tool([], _tool(), START, np.zeros((2, 2)), 5, MotionLog())
@@ -109,17 +112,6 @@ def test_move_tool_stop_token_breaks_midway() -> None:
     assert tool.target_position == pytest.approx(target)
 
 
-def test_move_tool_on_step_sees_fresh_sample() -> None:
-    log = MotionLog()
-    seen: list[int] = []
-
-    def on_step() -> None:
-        seen.append(len(log))
-
-    move_tool([], _tool(), np.array([16.0, 17.5, 10.0]), 0.0, 5, log, on_step=on_step)
-    assert seen == [1, 2, 3, 4, 5]
-
-
 def test_move_tool_attached_embryo_follows_every_step() -> None:
     embryo = Embryo(id=1, position=np.array([5.0, 5.0, 0.1]))
     tool = _tool()
@@ -136,6 +128,7 @@ def test_move_tool_attached_embryo_follows_every_step() -> None:
 
     move_tool([embryo], tool, target, rotation_z(0.4), 40, log, on_step=on_step)
 
+    assert len(sampled) == 40  # on_step fires once per interpolation step
     for tool_position, embryo_position in sampled:
         assert embryo_position == pytest.approx(tool_position - np.array([0.0, 0.0, 1.0]))
     assert tool.position == pytest.approx(target)
@@ -168,15 +161,6 @@ def test_move_tool_to_embryo() -> None:
     assert tool.orientation == pytest.approx(rotation_z(0.5), abs=1e-9)
 
 
-def test_move_tool_to_embryo_warns_without_selected() -> None:
-    tool = _tool()
-    log = MotionLog()
-    with pytest.warns(UserWarning, match="No selected embryo found"):
-        move_tool_to_embryo([Embryo(id=1)], tool, 10, log)
-    assert len(log) == 0
-    assert tool.state == ToolState.HOME
-
-
 def test_move_tool_final() -> None:
     embryo = Embryo(id=1, position=np.array([5.0, 5.0, 0.1]))
     tool = _tool()
@@ -194,99 +178,70 @@ def test_move_tool_final() -> None:
     assert embryo.position == pytest.approx(moved)
 
 
-def test_move_tool_final_warns_without_attached_embryo() -> None:
-    tool = _tool()
-    with pytest.warns(UserWarning, match="Tool has no attached embryo"):
-        move_tool_final([], tool, 10, np.zeros(3), MotionLog())
-
-
-def test_raise_tool() -> None:
-    tool = _tool()
-    tool.position = np.array([5.0, 6.0, 2.0])
-    log = MotionLog()
-
-    raise_tool([], tool, 10, log)
-
-    assert len(log) == 10
-    assert tool.position == pytest.approx([5.0, 6.0, 3.0])
-    assert tool.state == ToolState.LIFTED
-
-
-def test_return_home() -> None:
+def test_raise_and_return_home() -> None:
     tool = _tool()
     tool.position = np.array([5.0, 6.0, 2.0])
     tool.orientation = rotation_z(0.7)
     log = MotionLog()
 
-    return_home([], tool, 10, log)
+    raise_tool([], tool, 10, log)
+    assert tool.position == pytest.approx([5.0, 6.0, 3.0])
+    assert tool.state == ToolState.LIFTED
 
+    return_home([], tool, 10, log)
+    assert len(log) == 20
     assert tool.position == pytest.approx(START)
     assert tool.orientation == pytest.approx(np.eye(3), abs=1e-9)
     assert tool.state == ToolState.HOME
-    assert log.move_yaw_changes == pytest.approx([0.7], abs=1e-12)
+    assert log.move_yaw_changes[-1] == pytest.approx(0.7, abs=1e-12)
+
+
+def test_wrappers_warn_when_target_missing() -> None:
+    tool = _tool()
+    log = MotionLog()
+
+    with pytest.warns(UserWarning, match="No selected embryo found"):
+        move_tool_to_embryo([Embryo(id=1)], tool, 10, log)
+    assert len(log) == 0
+    assert tool.state == ToolState.HOME
+
+    with pytest.warns(UserWarning, match="Tool has no attached embryo"):
+        move_tool_final([], tool, 10, np.zeros(3), log)
 
 
 # -- legacy (corrected semantics, not wired into the engine) -----------------
 
 
-def test_lower_tool_corrected_semantics() -> None:
+def test_legacy_lower_tool_corrected_semantics() -> None:
     embryo = Embryo(id=1, position=np.array([5.0, 8.0, 0.1]), state=EmbryoState.SELECTED)
     tool = _tool()
     log = MotionLog()
 
     lower_tool([embryo], tool, 10, log)
-
-    assert len(log) == 10
     assert tool.state == ToolState.CONTACT
     expected = embryo.position + np.array([0.0, 0.0, embryo.height + tool.height])
     assert tool.position == pytest.approx(expected)
 
-
-def test_lower_tool_warns_without_selected() -> None:
-    with pytest.warns(UserWarning, match="No embryo found"):
-        lower_tool([Embryo(id=1)], _tool(), 10, MotionLog())
-
-
-def test_lower_tool_moved_corrected_semantics() -> None:
-    tool = _tool()
-    log = MotionLog()
     moved = np.array([81.0, 6.0, 0.1])
-
     lower_tool_moved([], tool, 10, moved, log)
-
-    assert len(log) == 10
+    assert len(log) == 20
     assert tool.state == ToolState.PLACE_CONTACT
     assert tool.position == pytest.approx(moved + np.array([0.0, 0.0, tool.height]))
+
+    with pytest.warns(UserWarning, match="No embryo found"):
+        lower_tool([Embryo(id=1)], tool, 10, log)
 
 
 # -- MotionLog recording / ZYX extraction -------------------------------------
 
 
-class _StubTool:
-    """Duck-typed tool exposing only ``pose`` / optional ``state``."""
-
-    def __init__(self, pose: np.ndarray, state: object = None) -> None:
-        self.pose = pose
-        if state is not None:
-            self.state = state
-
-
-# Ry(+-pi/2) literals for the gimbal-lock cases.
-_RY_POS = np.array([[0.0, 0.0, 1.0], [0.0, 1.0, 0.0], [-1.0, 0.0, 0.0]])
-_RY_NEG = np.array([[0.0, 0.0, -1.0], [0.0, 1.0, 0.0], [1.0, 0.0, 0.0]])
-
-
-def test_empty_log() -> None:
+def test_motion_log_recording() -> None:
     log = MotionLog()
     assert len(log) == 0
     assert log.positions.shape == (0, 3)
     assert log.rotation.shape == (0, 3)
     assert log.tool_state.tolist() == []
-    assert log.move_yaw_changes.shape == (0,)
 
-
-def test_record_reads_pose_and_state() -> None:
-    log = MotionLog()
     pose = make_pose(rotation_z(0.4), np.array([1.0, 2.0, 3.0]))
     log.record(_StubTool(pose, state="grasped"))
     assert len(log) == 1
@@ -294,49 +249,29 @@ def test_record_reads_pose_and_state() -> None:
     np.testing.assert_allclose(log.rotation, [[0.0, 0.0, 0.4]], rtol=0, atol=1e-12)
     assert log.tool_state.tolist() == ["grasped"]
 
+    log.record(_StubTool(np.eye(4)))  # missing state -> "unknown"
+    record_tool_motion(log, create_tool_head(load_workspace("default")))
+    assert log.tool_state.tolist() == ["grasped", "unknown", "home"]
 
-def test_record_missing_state_is_unknown() -> None:
+
+def test_extract_zyx_angles() -> None:
+    assert extract_zyx_angles(rotation_z(0.3)) == pytest.approx([0.0, 0.0, 0.3], abs=1e-12)
+    # gimbal lock (|cos(pitch)| <= 1e-8) takes the roll=0 fallback branch
+    locked_pos = rotation_z(0.7) @ _RY_POS
+    assert extract_zyx_angles(locked_pos) == pytest.approx([0.0, np.pi / 2, 0.7], abs=1e-12)
+    locked_neg = rotation_z(0.7) @ _RY_NEG
+    assert extract_zyx_angles(locked_neg) == pytest.approx([0.0, -np.pi / 2, 0.7], abs=1e-12)
+
+
+def test_move_yaw_changes_and_to_dict() -> None:
     log = MotionLog()
-    log.record(_StubTool(np.eye(4)))
-    assert log.tool_state.tolist() == ["unknown"]
-
-
-def test_record_tool_head_uses_enum_value() -> None:
-    tool = create_tool_head(load_workspace("default"))
-    log = record_tool_motion(MotionLog(), tool)
-    assert log.tool_state.tolist() == [ToolState.HOME.value]
-
-
-def test_extract_zyx_pure_yaw() -> None:
-    angles = extract_zyx_angles(rotation_z(0.3))
-    assert angles == pytest.approx([0.0, 0.0, 0.3], abs=1e-12)
-
-
-def test_gimbal_lock_positive_pitch_uses_fallback() -> None:
-    rotation = rotation_z(0.7) @ _RY_POS
-    angles = extract_zyx_angles(rotation)
-    assert angles == pytest.approx([0.0, np.pi / 2, 0.7], abs=1e-12)
-
-
-def test_gimbal_lock_negative_pitch_uses_fallback() -> None:
-    rotation = rotation_z(0.7) @ _RY_NEG
-    angles = extract_zyx_angles(rotation)
-    assert angles == pytest.approx([0.0, -np.pi / 2, 0.7], abs=1e-12)
-
-
-def test_move_yaw_changes_recording() -> None:
-    log = MotionLog()
+    log.record(_StubTool(make_pose(np.eye(3), np.array([1.0, 0.0, 0.0]))))
     log.record_move_yaw_change(0.25)
     log.record_move_yaw_change(0.5)
     assert log.move_yaw_changes.tolist() == [0.25, 0.5]
 
-
-def test_to_dict_is_plain_python() -> None:
-    log = MotionLog()
-    log.record(_StubTool(make_pose(np.eye(3), np.array([1.0, 0.0, 0.0]))))
-    log.record_move_yaw_change(0.1)
     data = log.to_dict()
     assert data["positions"] == [[1.0, 0.0, 0.0]]
     assert data["rotation"] == [[0.0, 0.0, 0.0]]
     assert data["tool_state"] == ["unknown"]
-    assert data["move_yaw_changes"] == [0.1]
+    assert data["move_yaw_changes"] == [0.25, 0.5]

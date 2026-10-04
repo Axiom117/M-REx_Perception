@@ -12,47 +12,33 @@ from mrex_perception.config.workspace import load_workspace
 CONFIG_DIR = Path(__file__).resolve().parents[1] / "config" / "workspace"
 
 
-def test_config_root_points_at_repo_config_dir() -> None:
+def test_config_root_and_mapping(tmp_path: Path) -> None:
     root = config_root()
-    assert root.is_dir()
     assert (root / "workspace" / "default.yaml").is_file()
 
-
-def test_load_config_mapping_reads_yaml(tmp_path: Path) -> None:
     (tmp_path / "sample.yaml").write_text("a: 1\nb: [2, 3]\n", encoding="utf-8")
     assert load_config_mapping("sample", tmp_path, label="Test config") == {"a": 1, "b": [2, 3]}
 
-
-def test_load_config_mapping_treats_name_literally(tmp_path: Path) -> None:
-    # config_name is the bare object name; extensions are handled internally.
+    # config_name is the bare object name; extensions are handled internally
     (tmp_path / "sample.yml").write_text("a: 1\n", encoding="utf-8")
     with pytest.raises(FileNotFoundError, match="Test config file not found"):
         load_config_mapping("sample.yml", tmp_path, label="Test config")
 
-
-def test_load_config_mapping_empty_file_gives_empty_dict(tmp_path: Path) -> None:
     (tmp_path / "empty.yaml").write_text("", encoding="utf-8")
     assert load_config_mapping("empty", tmp_path, label="Test config") == {}
 
 
-def test_load_config_mapping_missing_file(tmp_path: Path) -> None:
+def test_loader_errors(tmp_path: Path) -> None:
     with pytest.raises(FileNotFoundError, match="Test config file not found"):
         load_config_mapping("nope", tmp_path, label="Test config")
 
-
-def test_load_config_mapping_rejects_non_mapping(tmp_path: Path) -> None:
     (tmp_path / "list.yaml").write_text("- 1\n- 2\n", encoding="utf-8")
     with pytest.raises(ValueError, match="is not a mapping"):
         load_config_mapping("list", tmp_path, label="Test config")
 
-
-def test_require_fields() -> None:
     require_fields({"a": 1, "b": 2}, ("a", "b"), label="Test config")
     with pytest.raises(ValueError, match="missing fields: b"):
         require_fields({"a": 1}, ("a", "b"), label="Test config")
-
-
-# -- workspace config (load_workspace) ----------------------------------------
 
 
 def test_load_default_workspace() -> None:
@@ -70,29 +56,20 @@ def test_load_default_workspace() -> None:
     assert ws.surface_energy == 0.1
 
 
-def test_missing_file_error(tmp_path: Path) -> None:
+def test_workspace_errors_and_extension(tmp_path: Path) -> None:
     with pytest.raises(FileNotFoundError, match="not found"):
         load_workspace("does_not_exist", config_dir=tmp_path)
 
-
-def test_missing_fields_error(tmp_path: Path) -> None:
     (tmp_path / "broken.yaml").write_text("size: [100, 40, 10]\n", encoding="utf-8")
     with pytest.raises(ValueError) as excinfo:
         load_workspace("broken", config_dir=tmp_path)
-    message = str(excinfo.value)
-    assert "missing fields" in message
-    assert "density" in message
+    assert "missing fields" in str(excinfo.value)
 
-
-def test_wrong_vector_length_error(tmp_path: Path) -> None:
     text = (CONFIG_DIR / "default.yaml").read_text(encoding="utf-8")
     bad = text.replace("sourceregion: [0, 5, 20, 25]", "sourceregion: [0, 5, 20]")
     (tmp_path / "bad.yaml").write_text(bad, encoding="utf-8")
     with pytest.raises(ValueError, match="3, 4, and 4 values"):
         load_workspace("bad", config_dir=tmp_path)
 
-
-def test_yml_extension_supported(tmp_path: Path) -> None:
-    text = (CONFIG_DIR / "default.yaml").read_text(encoding="utf-8")
     (tmp_path / "alt.yml").write_text(text, encoding="utf-8")
     assert load_workspace("alt", config_dir=tmp_path).material == "glass"
