@@ -136,16 +136,26 @@ M-REx_Perception/
 │   │   ├── base.py                   # PumpDriver Protocol
 │   │   ├── simulated.py              # 仿真泵（空操作，不等待）
 │   │   └── serial_pump.py            # pyserial（对齐 releaseWithPump.m 命令集）
-│   ├── ui/
+│   ├── ui/                           # Qt 界面层：按组件分包（.ui 源 + 封装 + uic 产物同目录）
 │   │   ├── __init__.py
-│   │   ├── main_window.py            # 布局、菜单、快捷键
-│   │   ├── dashboard.py              # 参数控件 + 仪表 + 状态表
-│   │   ├── viewport.py               # 三视图（QtInteractor ×3）
-│   │   ├── renderer.py               # Snapshot → 网格（椭球/圆柱/包围盒）
-│   │   ├── charts.py                 # pyqtgraph 实时曲线
-│   │   ├── snapshot.py               # Snapshot 数据类（UI 只读消费）
 │   │   ├── theme.py                  # 深色 QSS
-│   │   └── screenshot.py             # 截图导出（对应 saveImage.m）
+│   │   ├── snapshot.py               # Snapshot 数据类（UI 只读消费）
+│   │   ├── charts.py                 # pyqtgraph 实时曲线
+│   │   ├── main_window/              # 主窗口组件
+│   │   │   ├── __init__.py           # 转发导出 MainWindow（对外导入路径不变）
+│   │   │   ├── main_window.ui        # 窗口布局/菜单/状态栏（Qt Designer 编辑）
+│   │   │   ├── main_window.py        # 窗口行为：菜单接线/状态栏内容/关于
+│   │   │   └── ui_main_window.py     # [生成] pyside6-uic 产物（勿手改）
+│   │   ├── dashboard/                # 仪表盘组件
+│   │   │   ├── __init__.py           # 转发导出 DashboardPanel
+│   │   │   ├── dashboard.ui          # 仪表盘布局（Qt Designer 编辑）
+│   │   │   ├── dashboard.py          # 参数控件薄封装（行为在 M4 接入）
+│   │   │   └── ui_dashboard.py       # [生成] pyside6-uic 产物（勿手改）
+│   │   └── viewport/                 # 三视图组件
+│   │       ├── __init__.py           # 转发导出 MultiViewPanel
+│   │       ├── viewport.py           # 三视图（QtInteractor ×3）
+│   │       ├── renderer.py           # Snapshot → 网格（椭球/圆柱/包围盒）
+│   │       └── screenshot.py         # 截图导出（对应 saveImage.m）
 │   └── config/
 │       ├── __init__.py
 │       ├── loader.py                 # 通用 YAML 读取机制（路径解析 / 解析 / 报错）

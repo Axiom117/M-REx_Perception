@@ -1,0 +1,228 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <!-- Generate class MainWindow -->
+ <class>MainWindow</class>
+ <!-- Top-level main window -->
+ <widget class="QMainWindow" name="MainWindow">
+
+  <!-- Define main window size, uic will compile it into MainWindow.resize() -->
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1500</width>
+    <height>900</height>
+   </rect>
+  </property>
+
+  <!-- Define window title, uic will compile it into retranslateUi() -->
+  <property name="windowTitle">
+   <string>M-REx Perception</string>
+  </property>
+
+  <!-- Central widget -->
+  <widget class="QWidget" name="centralwidget">
+
+   <!-- QHBoxLayout makes the left panel (dashboard) and right panel (viewports) -->
+   <layout class="QHBoxLayout" name="centralLayout">
+
+    <!-- Set spacing between left and right panels -->
+    <property name="spacing">
+     <number>8</number>
+    </property>
+    <!-- Setting layout margins to 4 pixels on all sides is recommended in modern UI design -->
+    <property name="leftMargin">
+     <number>4</number>
+    </property>
+    <property name="topMargin">
+     <number>4</number>
+    </property>
+    <property name="rightMargin">
+     <number>4</number>
+    </property>
+    <property name="bottomMargin">
+     <number>4</number>
+    </property>
+
+    <!-- Left panel: dashboard -->
+    <item>
+     <widget class="DashboardPanel" name="dashboard"/>
+    </item>
+
+    <!-- Right panel: viewports -->
+    <item>
+     <widget class="MultiViewPanel" name="viewports">
+      <property name="sizePolicy">
+       <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+        <horstretch>1</horstretch>
+        <verstretch>1</verstretch>
+       </sizepolicy>
+      </property>
+     </widget>
+    </item>
+
+   </layout>
+  </widget>
+
+  <!-- Menu bar -->
+  <widget class="QMenuBar" name="menubar">
+   <!-- Define menu bar size -->
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>1500</width>
+     <height>24</height>
+    </rect>
+   </property>
+
+   <widget class="QMenu" name="menuFile">
+    <property name="title">
+     <string>File(&amp;F)</string>
+    </property>
+    <addaction name="actionQuit"/>
+   </widget>
+   <widget class="QMenu" name="menuRun">
+    <property name="title">
+     <string>Run(&amp;R)</string>
+    </property>
+    <addaction name="actionStart"/>
+    <addaction name="actionPause"/>
+    <addaction name="actionStep"/>
+    <addaction name="actionStop"/>
+    <addaction name="actionReset"/>
+   </widget>
+   <widget class="QMenu" name="menuView">
+    <property name="title">
+     <string>View(&amp;V)</string>
+    </property>
+    <addaction name="actionFitAll"/>
+    <addaction name="actionResetView"/>
+   </widget>
+   <widget class="QMenu" name="menuHelp">
+    <property name="title">
+     <string>Help(&amp;H)</string>
+    </property>
+    <addaction name="actionAbout"/>
+   </widget>
+   <addaction name="menuFile"/>
+   <addaction name="menuRun"/>
+   <addaction name="menuView"/>
+   <addaction name="menuHelp"/>
+  </widget>
+
+  <!-- Status bar -->
+  <widget class="QStatusBar" name="statusbar">
+   <widget class="QLabel" name="versionLabel">
+    <property name="text">
+     <string notr="true"/>
+    </property>
+   </widget>
+  </widget>
+
+  <action name="actionQuit">
+   <property name="text">
+    <string>退出</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Q</string>
+   </property>
+  </action>
+
+  <action name="actionStart">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Start</string>
+   </property>
+   <property name="statusTip">
+    <string>M4 接入仿真引擎后启用</string>
+   </property>
+  </action>
+
+  <action name="actionPause">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Pause</string>
+   </property>
+   <property name="statusTip">
+    <string>M4 接入仿真引擎后启用</string>
+   </property>
+  </action>
+
+  <action name="actionStep">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Step</string>
+   </property>
+   <property name="statusTip">
+    <string>M4 接入仿真引擎后启用</string>
+   </property>
+  </action>
+  
+  <action name="actionStop">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Stop</string>
+   </property>
+   <property name="statusTip">
+    <string>M4 接入仿真引擎后启用</string>
+   </property>
+  </action>
+  <action name="actionReset">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Reset</string>
+   </property>
+   <property name="statusTip">
+    <string>M4 接入仿真引擎后启用</string>
+   </property>
+  </action>
+  <action name="actionFitAll">
+   <property name="text">
+    <string>Fit All</string>
+   </property>
+   <property name="shortcut">
+    <string>F</string>
+   </property>
+  </action>
+  <action name="actionResetView">
+   <property name="text">
+    <string>复位视角</string>
+   </property>
+   <property name="shortcut">
+    <string>0</string>
+   </property>
+  </action>
+  <action name="actionAbout">
+   <property name="text">
+    <string>关于</string>
+   </property>
+  </action>
+ </widget>
+
+ <!-- Promoted customized widgets, in this case DashboardPanel and MultiViewPanel -->
+ <customwidgets>
+  <customwidget>
+   <class>DashboardPanel</class>
+   <extends>QWidget</extends>
+   <header>mrex_perception.ui.dashboard</header>
+  </customwidget>
+  <customwidget>
+   <class>MultiViewPanel</class>
+   <extends>QWidget</extends>
+   <header>mrex_perception.ui.viewport</header>
+  </customwidget>
+ </customwidgets>
+ <resources/>
+ <connections/>
+</ui>

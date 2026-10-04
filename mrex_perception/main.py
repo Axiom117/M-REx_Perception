@@ -40,6 +40,7 @@ def main(argv: list[str] | None = None) -> int:
     app.setApplicationVersion(__version__)
     apply_theme(app)
 
+    # Instantiate and show the main window
     window = MainWindow()
     window.show()
 

@@ -53,7 +53,7 @@ gantt
 - [x] 创建 `mrex_perception/` 包骨架（目录结构见架构文档 §4），`python -m mrex_perception` 启动
 - [x] `MainWindow`：菜单栏 + 左仪表盘占位 + 右 2×2 网格放 3 个空白 `QtInteractor`（Top/Front/Right）+ 状态栏
 - [x] VS Code：`.vscode/settings.json` 指定解释器
-- [ ] 可选：安装 Qt Designer 扩展（`seanwu.vscode-qt-for-python`）与 `.ui` 编译任务（待确认）
+- [x] Qt Designer 扩展（`seanwu.vscode-qt-for-python`）；`MainWindow`/`Dashboard` 迁移为 `.ui` + `pyside6-uic`（VS Code 任务「uic: 编译全部 .ui」）
 
 ### 验收
 
