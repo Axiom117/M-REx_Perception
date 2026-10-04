@@ -91,19 +91,19 @@ gantt
 
 ---
 
-## 4. M2 — 运动·抓取·记录·汇总
+## 4. M2 — 运动·抓取·记录·汇总（✅ 完成于 2026-10-04）
 
 ### 任务清单
 
-- [ ] `core/motion_log.py`：`MotionLog` + `record_tool_motion`（ZYX 提取 + 万向锁分支）
-- [ ] `core/motion.py`：`move_tool`（最短角插值、胚随动、`on_step` 回调、`stop_token`）
-- [ ] `core/motion.py`：`move_tool_to_embryo` / `move_tool_final` / `raise_tool` / `return_home`
-- [ ] `core/motion.py`：`lower_tool` / `lower_tool_moved`（legacy，仅移植不接入）
-- [ ] `core/planner.py`：`has_free_embryos` / `select_nearest_free` / `select_embryo` / `next_moved_position`
-- [ ] `core/grasping.py`：`pickup_probability` / `grasp` / `release`（RNG 与 Pump 注入）
-- [ ] `core/summary.py`：`compute_summary` → `SummaryReport`（字段对齐 `simulationSummary.m`）
-- [ ] `tests/matlab/dumpFixture.m`【可选但强烈建议】：MATLAB 侧读同一 fixture、跑同一函数、导出 JSON
-- [ ] 单元测试：`test_motion.py`、`test_grasping.py`、`test_planner.py`、`test_summary.py`
+- [x] `core/motion_log.py`：`MotionLog` + `record_tool_motion`（ZYX 提取 + 万向锁分支）
+- [x] `core/motion.py`：`move_tool`（最短角插值、胚随动、`on_step` 回调、`stop_token`）
+- [x] `core/motion.py`：`move_tool_to_embryo` / `move_tool_final` / `raise_tool` / `return_home`
+- [x] `core/motion.py`：`lower_tool` / `lower_tool_moved`（legacy，仅移植不接入）
+- [x] `core/planner.py`：`has_free_embryos` / `select_nearest_free` / `select_embryo` / `next_moved_position`
+- [x] `core/grasping.py`：`pickup_probability` / `grasp` / `release`（RNG 与 Pump 注入）
+- [x] `core/summary.py`：`compute_summary` → `SummaryReport`（字段对齐 `simulationSummary.m`）
+- [x] `tests/matlab/dumpFixture.m`：MATLAB 侧读同一 fixture、跑同一函数、导出 JSON（输出 `trace_m2.json` 已入库；headless 渲染阴影见 `tests/matlab/updateSimulation.m`）
+- [x] 单元测试：`test_motion.py`、`test_grasping.py`、`test_planner.py`、`test_summary.py`（另含 `test_motion_log.py`、`test_parity.py`）
 
 ### 验收（数值对齐，容差 1e-9）
 
@@ -115,6 +115,8 @@ gantt
 | `next_moved_position` | 分别构造 moved_count = 0, 1, 49, 50（换行）验证 col/row 网格与边界报错 |
 | 抓取路径 | 强制成功 / 强制失败×3 两种 outcome；对比 attempts、state、`failedGrasp` |
 | `compute_summary` | 用同一 `motionLog` 数据对比全部统计字段（含 `np.unwrap` 结果） |
+
+> ✅ 2026-10-04：上表全部检查已实装。MATLAB 侧 trace 由 `tests/matlab/dumpFixture.m` 生成（`matlab -batch "cd tests/matlab; dumpFixture"`，含脚本化抓取结果与逐字段汇总），Python 侧在 `tests/test_parity.py` 中复跑同一路径逐值对比（容差 1e-9）；另有 90 个单元测试与端到端落位总账验证（100 用例全绿）。`lowerTool*.m` 按修正语义移植（未接入引擎）；`clustered` 不参与汇总计数等 MATLAB 行为均已保真。
 
 ---
 

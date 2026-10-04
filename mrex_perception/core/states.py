@@ -23,9 +23,9 @@ class EmbryoState(StrEnum):
 class ToolState(StrEnum):
     """Tool head states.
 
-    ``LIFTED`` / ``CONTACT`` / ``PLACE_CONTACT`` are legacy states used only by
-    ``raiseTool.m`` / ``lowerTool*.m`` (not part of the main loop); they are
-    kept for fidelity with the MATLAB implementation.
+    ``LIFTED`` is set by ``raise_tool`` (the failed-grasp path of the main
+    loop); ``CONTACT`` / ``PLACE_CONTACT`` come from the legacy ``lowerTool*.m``
+    files, which are kept for fidelity but never wired into the engine.
     """
 
     HOME = "home"
