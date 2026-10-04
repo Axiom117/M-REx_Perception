@@ -46,11 +46,8 @@
      <layout class="QGridLayout" name="runGrid">
       <item row="0" column="0">
        <widget class="QPushButton" name="startButton">
-        <property name="enabled">
-         <bool>false</bool>
-        </property>
         <property name="toolTip">
-         <string>M3/M4 接入仿真引擎后启用</string>
+         <string>开始运行 (F5)</string>
         </property>
         <property name="text">
          <string>Start</string>
@@ -59,11 +56,8 @@
       </item>
       <item row="0" column="1">
        <widget class="QPushButton" name="pauseButton">
-        <property name="enabled">
-         <bool>false</bool>
-        </property>
         <property name="toolTip">
-         <string>M3/M4 接入仿真引擎后启用</string>
+         <string>暂停 / 继续 (F6)</string>
         </property>
         <property name="text">
          <string>Pause</string>
@@ -72,11 +66,8 @@
       </item>
       <item row="1" column="0">
        <widget class="QPushButton" name="stepButton">
-        <property name="enabled">
-         <bool>false</bool>
-        </property>
         <property name="toolTip">
-         <string>M3/M4 接入仿真引擎后启用</string>
+         <string>单步（暂停时可用） (F7)</string>
         </property>
         <property name="text">
          <string>Step</string>
@@ -85,11 +76,8 @@
       </item>
       <item row="1" column="1">
        <widget class="QPushButton" name="stopButton">
-        <property name="enabled">
-         <bool>false</bool>
-        </property>
         <property name="toolTip">
-         <string>M3/M4 接入仿真引擎后启用</string>
+         <string>停止 (Shift+F5)</string>
         </property>
         <property name="text">
          <string>Stop</string>
@@ -98,11 +86,8 @@
       </item>
       <item row="2" column="0">
        <widget class="QPushButton" name="resetButton">
-        <property name="enabled">
-         <bool>false</bool>
-        </property>
         <property name="toolTip">
-         <string>M3/M4 接入仿真引擎后启用</string>
+         <string>清除场景与统计 (Ctrl+R)</string>
         </property>
         <property name="text">
          <string>Reset</string>
@@ -120,11 +105,8 @@
      <layout class="QVBoxLayout" name="sourceLayout">
       <item>
        <widget class="QRadioButton" name="randomRadio">
-        <property name="enabled">
-         <bool>false</bool>
-        </property>
         <property name="text">
-         <string>Random Arrangement (M1)</string>
+         <string>Random Arrangement</string>
         </property>
         <property name="checked">
          <bool>true</bool>
@@ -140,6 +122,50 @@
          <string>Image Detection / YOLO (M5)</string>
         </property>
        </widget>
+      </item>
+      <item>
+       <layout class="QGridLayout" name="sourceGrid">
+        <item row="0" column="0">
+         <widget class="QLabel" name="countLabel">
+          <property name="text">
+           <string>count</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="1">
+         <widget class="QSpinBox" name="countSpin">
+          <property name="minimum">
+           <number>1</number>
+          </property>
+          <property name="maximum">
+           <number>200</number>
+          </property>
+          <property name="value">
+           <number>6</number>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="0">
+         <widget class="QLabel" name="seedLabel">
+          <property name="text">
+           <string>seed</string>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="1">
+         <widget class="QSpinBox" name="seedSpin">
+          <property name="toolTip">
+           <string>固定种子便于复现（每次运行使用同一序列）</string>
+          </property>
+          <property name="maximum">
+           <number>2147483647</number>
+          </property>
+          <property name="value">
+           <number>42</number>
+          </property>
+         </widget>
+        </item>
+       </layout>
       </item>
      </layout>
     </widget>
@@ -159,9 +185,6 @@
       </item>
       <item row="0" column="1">
        <widget class="QSpinBox" name="numStepsSpin">
-        <property name="enabled">
-         <bool>false</bool>
-        </property>
         <property name="minimum">
          <number>1</number>
         </property>
@@ -184,9 +207,6 @@
        <layout class="QHBoxLayout" name="targetLayout">
         <item>
          <widget class="QDoubleSpinBox" name="targetXSpin">
-          <property name="enabled">
-           <bool>false</bool>
-          </property>
           <property name="decimals">
            <number>2</number>
           </property>
@@ -203,9 +223,6 @@
         </item>
         <item>
          <widget class="QDoubleSpinBox" name="targetYSpin">
-          <property name="enabled">
-           <bool>false</bool>
-          </property>
           <property name="decimals">
            <number>2</number>
           </property>
@@ -222,9 +239,6 @@
         </item>
         <item>
          <widget class="QDoubleSpinBox" name="targetZSpin">
-          <property name="enabled">
-           <bool>false</bool>
-          </property>
           <property name="decimals">
            <number>2</number>
           </property>
@@ -245,12 +259,119 @@
     </widget>
    </item>
    <item>
+    <widget class="QGroupBox" name="telemetryGroup">
+     <property name="title">
+      <string>Telemetry</string>
+     </property>
+     <layout class="QFormLayout" name="telemetryForm">
+      <item row="0" column="0">
+       <widget class="QLabel" name="toolStateTitle">
+        <property name="text">
+         <string>Tool state</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="1">
+       <widget class="QLabel" name="toolStateLabel">
+        <property name="text">
+         <string>—</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="0">
+       <widget class="QLabel" name="progressTitle">
+        <property name="text">
+         <string>Progress</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="1">
+       <widget class="QLabel" name="progressLabel">
+        <property name="text">
+         <string>—</string>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="0">
+       <widget class="QLabel" name="attemptsTitle">
+        <property name="text">
+         <string>Attempts</string>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="1">
+       <widget class="QLabel" name="attemptsLabel">
+        <property name="text">
+         <string>—</string>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="0">
+       <widget class="QLabel" name="successTitle">
+        <property name="text">
+         <string>Success</string>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="1">
+       <widget class="QLabel" name="successLabel">
+        <property name="text">
+         <string>—</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QGroupBox" name="chartGroup">
+     <property name="title">
+      <string>Charts</string>
+     </property>
+     <layout class="QVBoxLayout" name="chartLayout">
+      <property name="spacing">
+       <number>4</number>
+      </property>
+      <item>
+       <widget class="PlotWidget" name="zPlot">
+        <property name="minimumSize">
+         <size>
+          <width>0</width>
+          <height>80</height>
+         </size>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="PlotWidget" name="yawPlot">
+        <property name="minimumSize">
+         <size>
+          <width>0</width>
+          <height>80</height>
+         </size>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="PlotWidget" name="distancePlot">
+        <property name="minimumSize">
+         <size>
+          <width>0</width>
+          <height>80</height>
+         </size>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
     <widget class="QLabel" name="noteLabel">
      <property name="styleSheet">
       <string>color: #8b94a3;</string>
      </property>
      <property name="text">
-      <string>M0 占位：控件将在 M4 接入仿真引擎</string>
+      <string>仿真模式（Random）；YOLO（M5）与硬件（M6）后续接入。</string>
      </property>
      <property name="wordWrap">
       <bool>true</bool>
@@ -275,6 +396,13 @@
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>PlotWidget</class>
+   <extends>QWidget</extends>
+   <header>pyqtgraph</header>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>

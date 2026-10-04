@@ -459,7 +459,7 @@ sequenceDiagram
         E->>E: 检查 stop token
         E-->>W: 最新快照（覆盖式缓冲）
     end
-    W-->>UI: snapshot 信号（≤30Hz 节流）
+    W-->>UI: （UI 定时 take_snapshot，60 Hz latest-wins）
     UI->>UI: 三视图重绘 + 仪表刷新
     E-->>W: FinishReason + SummaryReport
     W-->>UI: finished 信号
@@ -472,6 +472,10 @@ sequenceDiagram
 3. **暂停/单步**：`pause()` 置暂停事件，worker 在步间阻塞等待；单步模式在每步后自动暂停（可选增强项）。
 4. **关闭窗口**：`closeEvent` → 请求 stop → `thread.join(timeout)` → 释放 VTK plotter；防止退出时线程残留。
 5. **异常上报**：worker 捕获异常并通过 `failed(str)` 信号送到 UI（状态栏 + 日志面板），不静默崩溃。
+
+> ✅ 2026-10-04（M4）：`ui/worker.py` 实装 latest-wins 快照缓冲 + `on_step` 门控（暂停阻塞 / `request_step` 释放一次 / `request_stop` 唤醒）；`ui/main_window.py` 用 16 ms QTimer 拉取渲染（状态栏显示 FPS），`closeEvent` 停 worker → `wait(1.5s)` → `plotter.close()`。
+>
+> **性能要点（macOS）**：每个快照渲染 3 个 VTK 视图；但 Qt 部件（pyqtgraph 图表/标签）的每帧重绘会与 VTK 交换链互相节流（vsync 串行，实测 15 fps）。因此仪表文字 4 Hz、图表重绘 2 Hz（曲线数据仍逐帧累积），实测升至 45+ fps（干净条件 55–62）。
 
 ---
 
@@ -513,6 +517,8 @@ sequenceDiagram
 
 - **v1（先做对）**：每次快照重建 actor（数量 ≤ 数十，VTK 开销可忽略），代码简单、稳定。
 - **v2（再快）**：按胚胎 id 缓存 mesh，快照仅更新 `user_transform`；仅在状态变化时更新颜色。
+
+> ✅ 2026-10-04（M4）：已实装 v2-lite——`ui/viewport/renderer.py` 按胚胎 id 缓存 actor，快照仅改 `user_matrix`（位姿×缩放）与状态色；ID 标签/朝向箭头仅在开关开启时重建。初始取景对齐 MATLAB 轴限（`reset_camera(bounds=box)`，不含 180 mm 落位区怪癖）；Fit All 仍可查看全场景。
 - 截图：`plotter.screenshot(path, scale=...)`（替代 `exportgraphics`，见 `saveImage.m`），可一次导出三视图拼图。
 
 ---

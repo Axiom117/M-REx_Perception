@@ -1,23 +1,26 @@
 """Multi-viewport 3D panel (Top / Front / Right) built on PyVista's QtInteractor.
 
-M0 scope: three orthographic CAD-style views (Rhino-like) with a placeholder
-scene (workspace bounding box + ground grid). The workspace size will come from
-the YAML config loader in M1; the embryo/tool meshes arrive in M4.
+Three orthographic CAD-style views (Rhino-like) sharing one scene renderer set.
+The static scene comes from the workspace config; dynamic objects are updated
+from engine snapshots, always on the UI thread.
 """
 
 from __future__ import annotations
+
+from typing import cast
 
 import pyvista as pv
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QGridLayout, QLabel, QVBoxLayout, QWidget
 from pyvistaqt import QtInteractor
 
-# Placeholder workspace size (mm); replaced by the config loader in M1.
-PLACEHOLDER_WORKSPACE_SIZE = (100.0, 40.0, 10.0)
+from mrex_perception.core.engine import Snapshot
+from mrex_perception.core.models import Workspace
+
+from .renderer import SceneRenderer
 
 _BACKGROUND = "#16181d"
-_BOX_COLOR = "#5b6472"
-_GRID_COLOR = "#39404d"
+_PREVIEW_SIZE = (100.0, 40.0, 10.0)  # shown until MainWindow supplies the config
 
 
 class MultiViewPanel(QWidget):
@@ -35,6 +38,9 @@ class MultiViewPanel(QWidget):
             "front": self.front,
             "right": self.right,
         }
+        self._renderers = {
+            name: SceneRenderer(cast(pv.Plotter, view)) for name, view in self._views.items()
+        }
 
         grid = QGridLayout(self)
         grid.setContentsMargins(4, 4, 4, 4)
@@ -44,7 +50,7 @@ class MultiViewPanel(QWidget):
         grid.addWidget(self._titled("Front (XZ)", self.front), 0, 1)
         grid.addWidget(self._titled("Right (YZ)", self.right), 1, 0)
 
-        placeholder = QLabel("预留：透视图 / 遥测（M4）")
+        placeholder = QLabel("预留：运行汇总 / 日志（后续）")
         placeholder.setAlignment(Qt.AlignmentFlag.AlignCenter)
         placeholder.setStyleSheet(
             "color: #5b6472; border: 1px dashed #3a3f4b; border-radius: 6px;"
@@ -57,7 +63,9 @@ class MultiViewPanel(QWidget):
         grid.setColumnStretch(1, 1)
 
         self._configure_views()
-        self.set_workspace_box(PLACEHOLDER_WORKSPACE_SIZE)
+        for renderer in self._renderers.values():
+            renderer.set_workspace(_PREVIEW_SIZE)
+        self.fit_all()
 
     # -- public API ----------------------------------------------------------
 
@@ -72,26 +80,37 @@ class MultiViewPanel(QWidget):
             self._apply_orientation(view, name)
         self.fit_all()
 
-    def set_workspace_box(self, size: tuple[float, float, float]) -> None:
-        """Draw the workspace bounding box and ground grid in every viewport."""
-        width, height, depth = size
+    def set_workspace(self, workspace: Workspace) -> None:
+        """Draw the workspace box, ground grid and region rectangles from the config."""
+        for renderer in self._renderers.values():
+            renderer.set_workspace(workspace.size, workspace.source_region, workspace.moved_region)
+        # Frame the workspace box (MATLAB xlim/ylim/zlim), not the 180 mm moved region quirk.
+        width, height, depth = (float(v) for v in workspace.size)
         for view in self._views.values():
-            view.add_mesh(
-                pv.Box(bounds=(0, width, 0, height, 0, depth)),
-                style="wireframe",
-                color=_BOX_COLOR,
-                line_width=1,
-            )
-            ground = pv.Plane(
-                center=(width / 2, height / 2, 0),
-                direction=(0, 0, 1),
-                i_size=width,
-                j_size=height,
-                i_resolution=10,
-                j_resolution=4,
-            )
-            view.add_mesh(ground, style="wireframe", color=_GRID_COLOR, line_width=1)
-        self.fit_all()
+            view.reset_camera(bounds=(0.0, width, 0.0, height, 0.0, depth))
+
+    def update_scene(self, snapshot: Snapshot) -> None:
+        """Apply one engine snapshot to all views."""
+        for renderer in self._renderers.values():
+            renderer.update(snapshot)
+
+    def clear_scene(self) -> None:
+        """Remove all run objects from every view (Reset)."""
+        for renderer in self._renderers.values():
+            renderer.clear()
+
+    def set_show_ids(self, show: bool) -> None:
+        for renderer in self._renderers.values():
+            renderer.set_show_ids(show)
+
+    def set_show_arrows(self, show: bool) -> None:
+        for renderer in self._renderers.values():
+            renderer.set_show_arrows(show)
+
+    def close_plotters(self) -> None:
+        """Close every VTK interactor (must run on the UI thread before quitting)."""
+        for view in self._views.values():
+            view.close()
 
     # -- setup helpers -------------------------------------------------------
 

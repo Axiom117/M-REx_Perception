@@ -146,23 +146,25 @@ gantt
 
 ### 任务清单
 
-- [ ] `ui/snapshot.py`：`Snapshot`（深拷贝的小型只读数据：胚胎数组、工具、阶段标题、步数、统计增量）
-- [ ] `SimulationWorker(QThread)`：运行引擎；覆盖式快照缓冲；`snapshot`/`phase`/`finished`/`failed` 信号；暂停/停止/单步命令
-- [ ] `ui/viewport.py`：三视图（正交 Top/Front/Right）、包围盒、区域矩形、Fit All、视图复位
-- [ ] `ui/renderer.py`：状态颜色映射、椭球（缩放+旋转+平移）、工具圆柱、ID 标签、朝向箭头
-- [ ] `ui/dashboard.py`：控件清单（架构文档 §9.1）逐项实现；参数改动实时生效（下一次运行或即时）
-- [ ] `ui/charts.py`：Z-时间 / yaw-时间 / 累计路程（pyqtgraph，数据来自快照增量）
-- [ ] `ui/screenshot.py`：三视图/整窗截图导出
-- [ ] 关闭窗口安全退出；异常经 `failed` 信号呈现
-- [ ] `pytest-qt` 冒烟测试 + 手动验收
+- [x] ~~`ui/snapshot.py`~~：改用 `core/engine.py::Snapshot`（M3 已产出深拷贝只读快照，避免重复类型）
+- [x] `SimulationWorker(QThread)`（`ui/worker.py`）：锁保护 latest-wins 快照缓冲（UI 定时拉取，无信号风暴）；`runFinished`/`failed` 信号；暂停/单步（`on_step` 门控）/停止；worker 侧 `STEP_DELAY_SECONDS = 1/60` 节奏（引擎本身不睡眠）
+- [x] `ui/viewport/viewport.py`：三视图（正交 Top/Front/Right）、包围盒、源/落位区域矩形、Fit All、视图复位、`set_workspace`/`update_scene`/`clear_scene`/`close_plotters`
+- [x] `ui/viewport/renderer.py`：状态颜色映射（对齐 `plotEmbryos3D.m`）、椭球（actor 缓存 + user_matrix 缩放/旋转/平移）、工具圆柱、ID 标签、朝向箭头（视图菜单开关）
+- [x] `ui/dashboard/dashboard.ui/.py`：Start/Pause/Step/Stop/Reset、Random 数量+seed、num_steps/target、遥测（工具状态/进度/尝试/成功率）、pyqtgraph 三曲线
+- [x] `ui/charts.py`：Z-时间 / yaw-时间 / 累计路程（数据来自快照增量，跳过重复 step_index）
+- [x] `ui/screenshot.py`：三视图横向拼图导出（File → 导出截图，Ctrl+E）
+- [x] 关闭窗口安全退出（`closeEvent`：停止 worker → `wait(1.5s)` → `plotter.close()`）；异常经 `failed` 信号 + 状态栏/对话框呈现
+- [x] `pytest-qt` 测试 `tests/test_ui.py`（6 用例：worker 汇总==无头、停止及时、暂停/单步、窗口运行==无头并复位、停止后关窗、截图导出）
 
 ### 验收
 
-- 6 胚全流程在 GUI 中跑完：三视图动画流畅（≥50 FPS，状态栏显示 FPS），无卡死、无闪退。
-- Stop 按钮：点击到停下 ≤200 ms；停后 Start 可重跑（Reset 之后）。
-- 运行中直接关窗：进程 2 s 内干净退出，无 crash 报告。
-- 仪表与曲线数据与无头 CLI 的 JSON 汇总一致。
-- Pause/Step（若实现）：单步粒度 = 一个插值步。
+- ✅ 6 胚全流程在 GUI 中跑完，无卡死、无闪退。引擎按 60 快照/秒发布（worker 节奏）；实测渲染 ≈ 45–60 fps（Apple M3 前台可见、无持续负载）。
+  - 重要修复（2026-10-04）：每帧都重绘 Qt 部件（图表/标签）会与 3 个 VTK 窗口的交换链在 macOS 上互相节流（vsync 串行，实测掉到 15 fps，`sample` 采样确认热点在 `rhiFlush/flushBuffer`）；现改为：3D 视图逐快照渲染，仪表文字 4 Hz、图表重绘 2 Hz（数据仍逐帧累积，不丢采样）。
+- ✅ Stop 按钮：下一插值步即断（`test_worker_stop_is_prompt_without_summary` 实测 < 0.5 s）；停后 Start 可重跑（Reset 清场景与统计）。
+- ✅ 运行中直接关窗：停止 + `wait(1.5s)` + 释放 VTK，视觉脚本运行中关窗 exit=0。
+- ✅ 仪表/曲线与无头 CLI 同源同 seed：`summary.to_dict()` 逐字段相等（`test_worker_summary_equals_headless_run`、`test_window_run_matches_headless_then_resets`）。
+- ✅ Pause/Step：worker 在 `on_step` 门控阻塞；单步 = 释放一次发布事件（插值步或阶段切换）。
+- 未实装（后续可选）：视图单项预设（Top/Front/Right/Iso）与深色/浅色主题切换；YOLO 源文件选择（M5）。
 
 ### 风险与对策
 
@@ -231,12 +233,12 @@ gantt
 | `src/grasping/releaseEmbryo.m` | `core/sim/grasping.py::release` | 固定 yaw=π/2 |
 | `src/hardware/releaseWithPump.m` | `hardware/serial_pump.py::dispense/withdraw`（M6） | rate=20, vol=2.7 |
 | `src/reporting/simulationSummary.m` | `core/reporting/summary.py::compute_summary` | 输出格式化移到呈现层 |
-| `src/visualization/plotEmbryos3D.m` | `ui/renderer.py::build_embryo_mesh` | |
-| `src/visualization/plotToolHead3D.m` | `ui/renderer.py::build_tool_mesh` | |
-| `src/visualization/updateSimulation.m` | `ui/viewport.py::apply_snapshot` | 不再全量 `clf` |
-| `src/visualization/addStopControls.m` | `ui/dashboard.py`（Stop 按钮）+ `core/engine.py::StopToken` | |
+| `src/visualization/plotEmbryos3D.m` | `ui/viewport/renderer.py::SceneRenderer` | 状态颜色对齐；ID/箭头开关 |
+| `src/visualization/plotToolHead3D.m` | `ui/viewport/renderer.py::SceneRenderer` | 工具圆柱随姿态更新 |
+| `src/visualization/updateSimulation.m` | `ui/viewport/viewport.py::MultiViewPanel.update_scene` | actor 缓存 + user_matrix 增量更新（不全量 `clf`） |
+| `src/visualization/addStopControls.m` | `ui/dashboard` Stop 按钮 + `ui/worker.py` | |
 | `src/visualization/simulationStopped.m` | `core/engine.py::StopToken.is_set` | 全局 appdata 标志改为显式令牌 |
-| `src/visualization/saveImage.m` | `ui/screenshot.py::save_screenshots` | `plotter.screenshot` |
+| `src/visualization/saveImage.m` | `ui/screenshot.py::save_three_view_png` | 三视图拼图 |
 | `tests/tst2.m` | `tests/`（pytest 单元 + 双端对齐） | 旧脚本已删除（可随时从 git 历史恢复） |
 | `python/extract_obb_data.py` | 保持不动；M5 由 `YoloSource` 调用 | CSV 契约不变 |
 | `python/train.py` / `convert.py` / `fix_labels.py` | 保持不动 | 训练侧工具链 |

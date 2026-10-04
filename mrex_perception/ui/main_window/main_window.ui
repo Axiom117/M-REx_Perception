@@ -80,6 +80,7 @@
     <property name="title">
      <string>File(&amp;F)</string>
     </property>
+    <addaction name="actionExportImage"/>
     <addaction name="actionQuit"/>
    </widget>
    <widget class="QMenu" name="menuRun">
@@ -98,6 +99,9 @@
     </property>
     <addaction name="actionFitAll"/>
     <addaction name="actionResetView"/>
+    <addaction name="separator"/>
+    <addaction name="actionShowIds"/>
+    <addaction name="actionShowArrows"/>
    </widget>
    <widget class="QMenu" name="menuHelp">
     <property name="title">
@@ -130,61 +134,46 @@
   </action>
 
   <action name="actionStart">
-   <property name="enabled">
-    <bool>false</bool>
-   </property>
    <property name="text">
     <string>Start</string>
    </property>
-   <property name="statusTip">
-    <string>M4 接入仿真引擎后启用</string>
+   <property name="shortcut">
+    <string>F5</string>
    </property>
   </action>
 
   <action name="actionPause">
-   <property name="enabled">
-    <bool>false</bool>
-   </property>
    <property name="text">
     <string>Pause</string>
    </property>
-   <property name="statusTip">
-    <string>M4 接入仿真引擎后启用</string>
+   <property name="shortcut">
+    <string>F6</string>
    </property>
   </action>
 
   <action name="actionStep">
-   <property name="enabled">
-    <bool>false</bool>
-   </property>
    <property name="text">
     <string>Step</string>
    </property>
-   <property name="statusTip">
-    <string>M4 接入仿真引擎后启用</string>
+   <property name="shortcut">
+    <string>F7</string>
    </property>
   </action>
   
   <action name="actionStop">
-   <property name="enabled">
-    <bool>false</bool>
-   </property>
    <property name="text">
     <string>Stop</string>
    </property>
-   <property name="statusTip">
-    <string>M4 接入仿真引擎后启用</string>
+   <property name="shortcut">
+    <string>Shift+F5</string>
    </property>
   </action>
   <action name="actionReset">
-   <property name="enabled">
-    <bool>false</bool>
-   </property>
    <property name="text">
     <string>Reset</string>
    </property>
-   <property name="statusTip">
-    <string>M4 接入仿真引擎后启用</string>
+   <property name="shortcut">
+    <string>Ctrl+R</string>
    </property>
   </action>
   <action name="actionFitAll">
@@ -201,6 +190,30 @@
    </property>
    <property name="shortcut">
     <string>0</string>
+   </property>
+  </action>
+  <action name="actionShowIds">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Show IDs</string>
+   </property>
+  </action>
+  <action name="actionShowArrows">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Show Orientation Arrows</string>
+   </property>
+  </action>
+  <action name="actionExportImage">
+   <property name="text">
+    <string>导出截图…</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+E</string>
    </property>
   </action>
   <action name="actionAbout">
