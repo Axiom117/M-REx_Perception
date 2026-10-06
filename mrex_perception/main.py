@@ -5,56 +5,44 @@ from __future__ import annotations
 import argparse
 import sys
 
-from PySide6.QtCore import QTimer
 from PySide6.QtWidgets import QApplication
 
 from mrex_perception import __version__
+from mrex_perception.config.app import load_app_config
 from mrex_perception.ui.main_window import MainWindow
 from mrex_perception.ui.theme import apply_theme
 
 
+# Parse arguments first so that --version/--help work without starting the GUI.
 def _parse_args(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(prog="mrex", description="M-REx Perception GUI")
+
+    # Show version information and exit 
     parser.add_argument("--version", action="version", version=f"mrex {__version__}")
     parser.add_argument(
-        "--smoke",
-        action="store_true",
-        help="show the window and quit automatically (startup smoke test)",
-    )
-    parser.add_argument(
-        "--smoke-delay",
-        type=int,
-        default=3000,
-        metavar="MS",
-        help="auto-quit delay in milliseconds for --smoke (default: 3000)",
+        "--config", default="default", help="workspace config name (default: %(default)s)"
     )
     return parser.parse_args(argv)
 
-
+# Entry point for the application with optional command-line arguments
 def main(argv: list[str] | None = None) -> int:
     """Run the GUI application and return the process exit code."""
+    # Skip the 0-th argument (script name) when parsing arguments.
     args = _parse_args(sys.argv[1:] if argv is None else argv)
 
+    # Initialize the Qt application.
     app = QApplication(sys.argv)
     app.setApplicationName("M-REx Perception")
     app.setApplicationVersion(__version__)
     apply_theme(app)
 
-    # Instantiate and show the main window
-    window = MainWindow()
+    # Instantiate and show the main window with the loaded app config
+    window = MainWindow(load_app_config(args.config))
     window.show()
 
-    if args.smoke:
-        print(f"[smoke] window shown; auto-quit in {args.smoke_delay} ms")
-        QTimer.singleShot(args.smoke_delay, app.quit)
+    # Enter the Qt main event loop.
+    return int(app.exec())
 
-    exit_code = int(app.exec())
-
-    if args.smoke:
-        print(f"[smoke] exited normally (code {exit_code})")
-
-    return exit_code
-
-
+# Only run the application if this module is executed as the main script.
 if __name__ == "__main__":
     raise SystemExit(main())

@@ -78,18 +78,18 @@ def test_select_embryo_is_one_based_and_resets_others() -> None:
 
 
 def test_next_moved_position_grid() -> None:
-    ws = load_workspace("default")  # spacing = 0.5 * 4 = 2; num_cols = floor(100 / 2) = 50
+    ws = load_workspace("default")  # spacing = 0.5 * 4 = 2; num_cols = floor(45 / 2) = 22
 
-    assert next_moved_position(_moved_scenario(0), ws) == pytest.approx([81.0, 6.0, 0.1])
-    assert next_moved_position(_moved_scenario(1), ws) == pytest.approx([83.0, 6.0, 0.1])
-    assert next_moved_position(_moved_scenario(49), ws) == pytest.approx([179.0, 6.0, 0.1])
-    assert next_moved_position(_moved_scenario(50), ws) == pytest.approx([81.0, 8.0, 0.1])
+    assert next_moved_position(_moved_scenario(0), ws) == pytest.approx([41.0, 6.0, 0.1])
+    assert next_moved_position(_moved_scenario(1), ws) == pytest.approx([43.0, 6.0, 0.1])
+    assert next_moved_position(_moved_scenario(22), ws) == pytest.approx([41.0, 8.0, 0.1])
+    assert next_moved_position(_moved_scenario(49), ws) == pytest.approx([51.0, 10.0, 0.1])
 
     # grid dimensions come from the first embryo (spacing 0.25 * 4 = 1.0)
     embryos = _moved_scenario(0)
     embryos[0].length = 0.25
     embryos[0].height = 0.4
-    assert next_moved_position(embryos, ws) == pytest.approx([80.5, 5.5, 0.2])
+    assert next_moved_position(embryos, ws) == pytest.approx([40.5, 5.5, 0.2])
 
 
 def test_next_moved_position_errors() -> None:

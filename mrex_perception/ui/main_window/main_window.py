@@ -18,9 +18,10 @@ from PySide6.QtGui import QCloseEvent
 from PySide6.QtWidgets import QFileDialog, QLabel, QMainWindow, QMessageBox, QWidget
 
 from mrex_perception import __version__
-from mrex_perception.config.workspace import load_workspace
+from mrex_perception.config.app import AppConfig, load_app_config
+from mrex_perception.config.workspace import list_workspace_configs
 from mrex_perception.core.engine import EngineParams, EngineResult, FinishReason, Snapshot
-from mrex_perception.core.models import EmbryoState, ToolHead
+from mrex_perception.core.models import EmbryoState, ToolHead, Workspace
 from mrex_perception.core.setup import populate_random
 from mrex_perception.ui.screenshot import save_three_view_png
 from mrex_perception.ui.worker import SimulationWorker
@@ -34,7 +35,8 @@ _UI_REFRESH_SECONDS = 0.25  # dashboard text refresh; per-frame Qt repaints thro
 class MainWindow(QMainWindow):
     """Top-level window and run controller."""
 
-    def __init__(self, parent: QWidget | None = None) -> None:
+    def __init__(self, config: AppConfig | None = None, parent: QWidget | None = None) -> None:
+        # Initialize the C++ Qt main window via the parent class constructor.
         super().__init__(parent)
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
@@ -48,8 +50,12 @@ class MainWindow(QMainWindow):
         self.dashboard = self.ui.dashboard
         self.viewports = self.ui.viewports
 
-        self._workspace = load_workspace()
-        self.viewports.set_workspace(self._workspace)
+        # Config injection ("A" scheme): entry points pass a pre-loaded AppConfig
+        # aggregate; new config sections grow inside AppConfig, never in this
+        # signature. The None fallback keeps bare ``MainWindow()`` usable (tests).
+        self._config = config if config is not None else load_app_config()
+        self._config_names: list[str] = []
+        self.viewports.set_workspace(self._config.workspace)
 
         self._worker: SimulationWorker | None = None
         self._paused = False
@@ -62,6 +68,7 @@ class MainWindow(QMainWindow):
 
         self._build_status_bar()
         self._wire_actions()
+        self._build_config_menu()
         self._sync_actions()
         self.statusBar().showMessage("就绪")
 
@@ -72,24 +79,44 @@ class MainWindow(QMainWindow):
 
     # -- public API (also used by tests) -------------------------------------
 
+    @property
+    def workspace(self) -> Workspace:
+        """Active workspace (from the injected/loaded app config)."""
+        return self._config.workspace
+
     def is_running(self) -> bool:
         return self._worker is not None
+
+    def apply_config(self, config: AppConfig) -> bool:
+        """Switch the app config at runtime (Config menu entry point).
+
+        Ignored while a run is active: the worker holds the current workspace.
+        On success the static scene is rebuilt and previous run telemetry is
+        cleared; the next run derives embryos and tool head from the new config.
+        """
+        if self._worker is not None:
+            self.statusBar().showMessage("运行中无法切换配置")
+            return False
+        self._config = config
+        self.viewports.set_workspace(config.workspace)
+        self.reset_run()
+        return True
 
     def start_run(self) -> None:
         """Build embryos + tool and start a fresh worker run."""
         if self._worker is not None:
             return
         rng = np.random.default_rng(self.dashboard.seed)
-        embryos = populate_random(self.dashboard.count, self._workspace, rng)
+        embryos = populate_random(self.dashboard.count, self._config.workspace, rng)
         params = EngineParams(
             num_steps=self.dashboard.num_steps, target_point=self.dashboard.target_point
         )
         worker = SimulationWorker(
-            self._workspace,
+            self._config.workspace,
             embryos,
             params,
             rng=rng,
-            tool=ToolHead.for_workspace(self._workspace),
+            tool=ToolHead.for_workspace(self._config.workspace),
         )
         worker.runFinished.connect(self._on_run_finished)
         worker.failed.connect(self._on_run_failed)
@@ -227,6 +254,26 @@ class MainWindow(QMainWindow):
         self.dashboard.stopRequested.connect(self.stop_run)
         self.dashboard.resetRequested.connect(self.reset_run)
 
+    def _build_config_menu(self) -> None:
+        """Populate the Config menu with the available workspace YAMLs."""
+        self._config_names = list_workspace_configs()
+        if not self._config_names:
+            self.ui.menuConfig.setToolTip("未找到 config/workspace/*.yaml")
+            return
+        for name in self._config_names:
+            action = self.ui.menuConfig.addAction(name)
+            action.triggered.connect(lambda _checked=False, n=name: self._select_config(n))
+
+    def _select_config(self, name: str) -> None:
+        """Load a workspace config by name and apply it (Config menu handler)."""
+        try:
+            config = load_app_config(name)
+        except (FileNotFoundError, OSError, ValueError) as exc:
+            QMessageBox.warning(self, "配置加载失败", str(exc))
+            return
+        if self.apply_config(config):
+            self.statusBar().showMessage(f"已应用配置：{name}")
+
     def _sync_actions(self) -> None:
         running = self._worker is not None
         self.ui.actionStart.setEnabled(not running)
@@ -234,6 +281,7 @@ class MainWindow(QMainWindow):
         self.ui.actionStop.setEnabled(running)
         self.ui.actionStep.setEnabled(running and self._paused)
         self.ui.actionReset.setEnabled(not running)
+        self.ui.menuConfig.setEnabled(not running and bool(self._config_names))
 
     def _build_status_bar(self) -> None:
         bar = self.statusBar()

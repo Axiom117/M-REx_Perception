@@ -27,10 +27,10 @@ def test_make_pose_assembles_rotation_and_translation() -> None:
 def test_pixel_to_workspace_samples() -> None:
     """Hand-computed samples; image y is flipped relative to the workspace axis."""
     ws = load_workspace("default")
-    assert pixel_to_workspace(500, 250, 1000, 500, ws) == pytest.approx([10.0, 17.5, 0.1])
-    assert pixel_to_workspace(0, 0, 1000, 500, ws) == pytest.approx([0.0, 30.0, 0.1])
-    assert pixel_to_workspace(1000, 500, 1000, 500, ws) == pytest.approx([20.0, 5.0, 0.1])
-    assert pixel_to_workspace(250, 125, 1000, 500, ws) == pytest.approx([5.0, 23.75, 0.1])
+    assert pixel_to_workspace(500, 250, 1000, 500, ws) == pytest.approx([15.0, 20.0, 0.1])
+    assert pixel_to_workspace(0, 0, 1000, 500, ws) == pytest.approx([0.0, 35.0, 0.1])
+    assert pixel_to_workspace(1000, 500, 1000, 500, ws) == pytest.approx([30.0, 5.0, 0.1])
+    assert pixel_to_workspace(250, 125, 1000, 500, ws) == pytest.approx([7.5, 27.5, 0.1])
     assert pixel_to_workspace(640, 480, 1280, 720, ws) == pytest.approx(
-        [10.0, 5 + 25 * (240 / 720), 0.1]
+        [15.0, 5 + 30 * (240 / 720), 0.1]
     )

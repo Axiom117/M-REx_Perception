@@ -75,7 +75,7 @@ gantt
 
 - [x] `core/models/states.py`：`EmbryoState` / `ToolState` 枚举，字符串值与 MATLAB 完全一致
 - [x] `core/models/entities.py`：`Workspace`、`Embryo`、`ToolHead` 数据类（字段表见架构文档 §5）
-- [x] `config/workspace.py`：PyYAML + pydantic 加载 `config/workspace/default.yaml`（**字段名不改**），校验规则对齐 `loadWorkspaceConfig.m`
+- [x] `config/workspace.py`：PyYAML + pydantic 加载 `config/workspace/default.yaml`，必填与长度校验【2026-10-06 更新：键名由 camelCase 统一为 snake_case，必填校验改用 pydantic 原生，不再对齐 `loadWorkspaceConfig.m`】
 - [x] `core/math/geometry.py`：`pixel_to_workspace`（已与 MATLAB 逐位对照：6 样例 `%.17g` 完全一致）
 - [x] `core/setup/embryos.py`：`populate_random`、`from_detections`（先用手造 CSV/记录测试）、`mark_clustered`
 - [x] `core/setup/tool.py`：`create_tool_head`（含初始位置 `[15, 17.5, 10]` 的推导式）【2026-10-04 并入 `core/models/entities.py::ToolHead.for_workspace`，`setup/tool.py` 删除】
@@ -261,7 +261,7 @@ tests/test_parity.py                   # Python 侧：复跑同一路径 → 与
 
 ```json
 {
-  "workspace": { "size": [100, 40, 10], "sourceregion": [0, 5, 20, 25], "movedregion": [80, 5, 100, 25], "movedSpacing": 4 },
+  "workspace": { "size": [100, 40, 10], "source_region": [0, 5, 30, 30], "moved_region": [40, 5, 45, 30], "moved_spacing": 4 },
   "embryos": [
     { "state": "free", "attempts": 0, "position": [3.0, 7.0, 0.1], "yaw": 0.5, "width": 0.2, "length": 0.5, "height": 0.2, "confidence": 1.0 }
   ],

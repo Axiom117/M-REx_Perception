@@ -80,7 +80,7 @@ def test_from_detections() -> None:
     # pixel position mapping and yaw = -theta
     theta = 0.3
     embryo = from_detections([_record(theta=theta)], ws)[0]
-    assert embryo.position == pytest.approx([10.0, 17.5, 0.1])
+    assert embryo.position == pytest.approx([15.0, 20.0, 0.1])
     assert embryo.orientation == pytest.approx(rotation_z(-theta))
 
     # empty result warns

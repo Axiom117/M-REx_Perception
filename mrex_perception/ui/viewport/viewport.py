@@ -84,7 +84,7 @@ class MultiViewPanel(QWidget):
         """Draw the workspace box, ground grid and region rectangles from the config."""
         for renderer in self._renderers.values():
             renderer.set_workspace(workspace.size, workspace.source_region, workspace.moved_region)
-        # Frame the workspace box (MATLAB xlim/ylim/zlim), not the 180 mm moved region quirk.
+        # Frame the workspace box (the drawn regions lie inside it).
         width, height, depth = (float(v) for v in workspace.size)
         for view in self._views.values():
             view.reset_camera(bounds=(0.0, width, 0.0, height, 0.0, depth))

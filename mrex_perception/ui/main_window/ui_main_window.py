@@ -85,6 +85,8 @@ class Ui_MainWindow(object):
         self.menuRun.setObjectName(u"menuRun")
         self.menuView = QMenu(self.menubar)
         self.menuView.setObjectName(u"menuView")
+        self.menuConfig = QMenu(self.menubar)
+        self.menuConfig.setObjectName(u"menuConfig")
         self.menuHelp = QMenu(self.menubar)
         self.menuHelp.setObjectName(u"menuHelp")
         MainWindow.setMenuBar(self.menubar)
@@ -98,6 +100,7 @@ class Ui_MainWindow(object):
         self.menubar.addAction(self.menuFile.menuAction())
         self.menubar.addAction(self.menuRun.menuAction())
         self.menubar.addAction(self.menuView.menuAction())
+        self.menubar.addAction(self.menuConfig.menuAction())
         self.menubar.addAction(self.menuHelp.menuAction())
         self.menuFile.addAction(self.actionExportImage)
         self.menuFile.addAction(self.actionQuit)
@@ -162,6 +165,7 @@ class Ui_MainWindow(object):
         self.menuFile.setTitle(QCoreApplication.translate("MainWindow", u"File(&F)", None))
         self.menuRun.setTitle(QCoreApplication.translate("MainWindow", u"Run(&R)", None))
         self.menuView.setTitle(QCoreApplication.translate("MainWindow", u"View(&V)", None))
+        self.menuConfig.setTitle(QCoreApplication.translate("MainWindow", u"Config(&C)", None))
         self.menuHelp.setTitle(QCoreApplication.translate("MainWindow", u"Help(&H)", None))
     # retranslateUi
 

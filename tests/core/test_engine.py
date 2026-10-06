@@ -87,8 +87,8 @@ def test_deterministic_fixture_run_places_embryos_on_grid() -> None:
     assert result.summary.success_rate == pytest.approx(100.0)
     assert result.summary.total_attempts == 3
     assert all(e.state == EmbryoState.MOVED for e in result.embryos)
-    # grid: spacing = length * movedSpacing = 2 -> x = 81, 83, 85; y = 6; z = 0.1
-    assert sorted(e.position[0] for e in result.embryos) == pytest.approx([81.0, 83.0, 85.0])
+    # grid: spacing = length * moved_spacing = 2 -> x = 41, 43, 45; y = 6; z = 0.1
+    assert sorted(e.position[0] for e in result.embryos) == pytest.approx([41.0, 43.0, 45.0])
     for embryo in result.embryos:
         assert embryo.position[1:] == pytest.approx([6.0, 0.1])
         assert embryo.orientation == pytest.approx(rotation_z(np.pi / 2), abs=1e-12)
@@ -216,5 +216,5 @@ def test_phase_and_step_hooks_emit_deep_copies() -> None:
     snapshots[0].embryos[0].position[0] = 999.0
     assert snapshots[1].tool.position == pytest.approx(second_tool)
     assert snapshots[1].embryos[0].position == pytest.approx(second_embryo)
-    assert result.embryos[0].position[0] == pytest.approx(81.0)  # engine state untouched
+    assert result.embryos[0].position[0] == pytest.approx(41.0)  # engine state untouched
     assert result.tool.position == pytest.approx(HOME)

@@ -12,6 +12,7 @@ from pathlib import Path
 
 import numpy as np
 
+from mrex_perception.config.app import AppConfig, load_app_config
 from mrex_perception.config.workspace import load_workspace
 from mrex_perception.core.engine import EngineParams, EngineResult, FinishReason, SimulationEngine
 from mrex_perception.core.models import ToolHead
@@ -165,3 +166,50 @@ def test_window_export_image_writes_png(qtbot, tmp_path: Path) -> None:
 
     assert path.exists()
     assert path.stat().st_size > 0
+
+
+def test_window_accepts_injected_config_and_lists_configs(qtbot) -> None:
+    ws = load_workspace("default")
+    window = MainWindow(AppConfig(workspace=ws))
+    qtbot.addWidget(window)
+
+    assert window.workspace is ws
+    # the Config menu is populated from config/workspace/*.yaml at startup
+    labels = [action.text() for action in window.ui.menuConfig.actions()]
+    assert "default" in labels
+
+
+def _write_alt_config(tmp_path: Path) -> None:
+    """Write a copy of default.yaml with a smaller workspace size."""
+    source = Path(__file__).resolve().parents[1] / "config" / "workspace" / "default.yaml"
+    text = source.read_text(encoding="utf-8")
+    alt_text = text.replace("size: [100, 40, 10]", "size: [80, 30, 8]")
+    (tmp_path / "alt.yaml").write_text(alt_text, encoding="utf-8")
+
+
+def test_window_apply_config_switches_workspace(qtbot, tmp_path: Path) -> None:
+    _write_alt_config(tmp_path)
+    window = MainWindow()
+    qtbot.addWidget(window)
+    original = window.workspace
+
+    assert window.apply_config(load_app_config("alt", config_dir=tmp_path))
+    assert window.workspace is not original
+    assert list(window.workspace.size) == [80.0, 30.0, 8.0]
+
+
+def test_window_apply_config_blocked_while_running(qtbot, tmp_path: Path) -> None:
+    _write_alt_config(tmp_path)
+    window = MainWindow()
+    qtbot.addWidget(window)
+    window.dashboard.ui.numStepsSpin.setValue(50)
+
+    window.start_run()
+    assert window.is_running()
+
+    alt = load_app_config("alt", config_dir=tmp_path)
+    assert window.apply_config(alt) is False  # ignored: worker holds the workspace
+    assert window.workspace.material == "glass"  # unchanged
+
+    window.stop_run()
+    qtbot.waitUntil(lambda: not window.is_running(), timeout=10_000)

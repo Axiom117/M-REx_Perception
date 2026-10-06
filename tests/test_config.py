@@ -6,8 +6,9 @@ from pathlib import Path
 
 import pytest
 
+from mrex_perception.config.app import AppConfig, load_app_config
 from mrex_perception.config.loader import config_root, load_config_mapping, require_fields
-from mrex_perception.config.workspace import load_workspace
+from mrex_perception.config.workspace import list_workspace_configs, load_workspace
 
 CONFIG_DIR = Path(__file__).resolve().parents[1] / "config" / "workspace"
 
@@ -44,8 +45,8 @@ def test_loader_errors(tmp_path: Path) -> None:
 def test_load_default_workspace() -> None:
     ws = load_workspace("default")
     assert list(ws.size) == [100.0, 40.0, 10.0]
-    assert list(ws.source_region) == [0.0, 5.0, 20.0, 25.0]
-    assert list(ws.moved_region) == [80.0, 5.0, 100.0, 25.0]
+    assert list(ws.source_region) == [0.0, 5.0, 30.0, 30.0]
+    assert list(ws.moved_region) == [40.0, 5.0, 45.0, 30.0]
     assert ws.moved_spacing == 4.0
     assert ws.material == "glass"
     assert ws.surface_height == 0.0
@@ -60,16 +61,41 @@ def test_workspace_errors_and_extension(tmp_path: Path) -> None:
     with pytest.raises(FileNotFoundError, match="not found"):
         load_workspace("does_not_exist", config_dir=tmp_path)
 
+    # missing required fields are reported natively by pydantic
     (tmp_path / "broken.yaml").write_text("size: [100, 40, 10]\n", encoding="utf-8")
     with pytest.raises(ValueError) as excinfo:
         load_workspace("broken", config_dir=tmp_path)
-    assert "missing fields" in str(excinfo.value)
+    assert "Field required" in str(excinfo.value)
+    assert "source_region" in str(excinfo.value)
 
     text = (CONFIG_DIR / "default.yaml").read_text(encoding="utf-8")
-    bad = text.replace("sourceregion: [0, 5, 20, 25]", "sourceregion: [0, 5, 20]")
+    bad = text.replace("source_region: [0, 5, 30, 30]", "source_region: [0, 5, 30]")
     (tmp_path / "bad.yaml").write_text(bad, encoding="utf-8")
     with pytest.raises(ValueError, match="3, 4, and 4 values"):
         load_workspace("bad", config_dir=tmp_path)
 
     (tmp_path / "alt.yml").write_text(text, encoding="utf-8")
     assert load_workspace("alt", config_dir=tmp_path).material == "glass"
+
+
+def test_list_workspace_configs(tmp_path: Path) -> None:
+    # the repo config dir always contains default.yaml
+    assert "default" in list_workspace_configs()
+
+    # stems are sorted and de-duplicated across .yaml/.yml; missing dir -> []
+    (tmp_path / "b.yaml").write_text("", encoding="utf-8")
+    (tmp_path / "a.yml").write_text("", encoding="utf-8")
+    (tmp_path / "b.yml").write_text("", encoding="utf-8")
+    assert list_workspace_configs(tmp_path) == ["a", "b"]
+    assert list_workspace_configs(tmp_path / "missing") == []
+
+
+def test_load_app_config(tmp_path: Path) -> None:
+    config = load_app_config()
+    assert isinstance(config, AppConfig)
+    assert config.workspace.material == "glass"
+
+    text = (CONFIG_DIR / "default.yaml").read_text(encoding="utf-8")
+    alt_text = text.replace("material: glass", "material: quartz")
+    (tmp_path / "alt.yaml").write_text(alt_text, encoding="utf-8")
+    assert load_app_config("alt", config_dir=tmp_path).workspace.material == "quartz"

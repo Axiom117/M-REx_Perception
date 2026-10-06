@@ -103,6 +103,11 @@
     <addaction name="actionShowIds"/>
     <addaction name="actionShowArrows"/>
    </widget>
+   <widget class="QMenu" name="menuConfig">
+    <property name="title">
+     <string>Config(&amp;C)</string>
+    </property>
+   </widget>
    <widget class="QMenu" name="menuHelp">
     <property name="title">
      <string>Help(&amp;H)</string>
@@ -112,6 +117,7 @@
    <addaction name="menuFile"/>
    <addaction name="menuRun"/>
    <addaction name="menuView"/>
+   <addaction name="menuConfig"/>
    <addaction name="menuHelp"/>
   </widget>
 
