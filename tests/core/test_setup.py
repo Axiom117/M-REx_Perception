@@ -7,7 +7,7 @@ import pytest
 
 from mrex_perception.config.workspace import load_workspace
 from mrex_perception.core.math import rotation_z
-from mrex_perception.core.models import Embryo, EmbryoState
+from mrex_perception.core.models import Embryo, EmbryoSpec, EmbryoState
 from mrex_perception.core.setup import from_detections, mark_clustered, populate_random
 
 
@@ -86,6 +86,32 @@ def test_from_detections() -> None:
     # empty result warns
     with pytest.warns(UserWarning, match="No embryos detected"):
         assert from_detections([_record(confidence=0.1)], ws) == []
+
+
+def test_populate_random_uses_spec() -> None:
+    ws = load_workspace("default")
+    spec = EmbryoSpec(width=0.4, length=0.8, height=0.3, min_spacing=2.0)
+    embryos = populate_random(4, ws, np.random.default_rng(7), spec)
+
+    for embryo in embryos:
+        assert embryo.shape == "ellipsoid"
+        assert embryo.width == pytest.approx(0.4)
+        assert embryo.length == pytest.approx(0.8)
+        assert embryo.height == pytest.approx(0.3)
+    for i, a in enumerate(embryos):
+        for b in embryos[i + 1 :]:
+            assert np.linalg.norm(a.position - b.position) >= 2.0
+
+
+def test_from_detections_uses_spec() -> None:
+    ws = load_workspace("default")
+    spec = EmbryoSpec(width=0.4, min_confidence=0.9)
+
+    assert from_detections([_record(confidence=0.85)], ws, spec) == []
+
+    embryo = from_detections([_record(confidence=0.95)], ws, spec)[0]
+    assert embryo.confidence == pytest.approx(0.95)
+    assert embryo.width == pytest.approx(0.4)
 
 
 def _record(

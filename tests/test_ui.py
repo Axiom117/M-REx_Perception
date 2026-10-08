@@ -13,6 +13,8 @@ from pathlib import Path
 import numpy as np
 
 from mrex_perception.config.app import AppConfig, load_app_config
+from mrex_perception.config.embryo import load_embryo
+from mrex_perception.config.tool_head import load_tool_head
 from mrex_perception.config.workspace import load_workspace
 from mrex_perception.core.engine import EngineParams, EngineResult, FinishReason, SimulationEngine
 from mrex_perception.core.models import ToolHead
@@ -170,7 +172,7 @@ def test_window_export_image_writes_png(qtbot, tmp_path: Path) -> None:
 
 def test_window_accepts_injected_config_and_lists_configs(qtbot) -> None:
     ws = load_workspace("default")
-    window = MainWindow(AppConfig(workspace=ws))
+    window = MainWindow(AppConfig(workspace=ws, embryo=load_embryo(), tool=load_tool_head()))
     qtbot.addWidget(window)
 
     assert window.workspace is ws
@@ -180,11 +182,19 @@ def test_window_accepts_injected_config_and_lists_configs(qtbot) -> None:
 
 
 def _write_alt_config(tmp_path: Path) -> None:
-    """Write a copy of default.yaml with a smaller workspace size."""
-    source = Path(__file__).resolve().parents[1] / "config" / "workspace" / "default.yaml"
-    text = source.read_text(encoding="utf-8")
-    alt_text = text.replace("size: [100, 40, 10]", "size: [80, 30, 8]")
-    (tmp_path / "alt.yaml").write_text(alt_text, encoding="utf-8")
+    """Stage a config root under ``tmp_path`` with a shrunk workspace ``alt`` config."""
+    source_root = Path(__file__).resolve().parents[1] / "config"
+    for section in ("workspace", "embryo", "tool_head"):
+        (tmp_path / section).mkdir()
+        for path in (source_root / section).glob("*.yaml"):
+            (tmp_path / section / path.name).write_text(
+                path.read_text(encoding="utf-8"), encoding="utf-8"
+            )
+    default = tmp_path / "workspace" / "default.yaml"
+    (tmp_path / "workspace" / "alt.yaml").write_text(
+        default.read_text(encoding="utf-8").replace("size: [100, 40, 10]", "size: [80, 30, 8]"),
+        encoding="utf-8",
+    )
 
 
 def test_window_apply_config_switches_workspace(qtbot, tmp_path: Path) -> None:

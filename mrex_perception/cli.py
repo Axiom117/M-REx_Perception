@@ -19,9 +19,8 @@ from pathlib import Path
 
 import numpy as np
 
-from mrex_perception.config.workspace import load_workspace
+from mrex_perception.config.app import load_app_config
 from mrex_perception.core.engine import EngineParams, SimulationEngine
-from mrex_perception.core.models import ToolHead
 from mrex_perception.core.reporting import SummaryReport
 from mrex_perception.core.setup import populate_random
 
@@ -36,6 +35,12 @@ def _build_parser() -> argparse.ArgumentParser:
     run = subparsers.add_parser("run", help="run a simulation and print its summary")
     run.add_argument(
         "--config", default="default", help="workspace config name (default: %(default)s)"
+    )
+    run.add_argument(
+        "--tool", default="default", help="tool head config name (default: %(default)s)"
+    )
+    run.add_argument(
+        "--embryo", default="default", help="embryo config name (default: %(default)s)"
     )
     run.add_argument(
         "--source",
@@ -120,15 +125,17 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(sys.argv[1:] if argv is None else argv)
 
     try:
-        workspace = load_workspace(args.config)
+        config = load_app_config(args.config, args.tool, args.embryo)
+        workspace = config.workspace
         rng = np.random.default_rng(args.seed)
-        embryos = populate_random(args.count, workspace, rng)
+        embryos = populate_random(args.count, workspace, rng, config.embryo)
         engine = SimulationEngine(
             workspace,
             embryos,
             EngineParams(num_steps=args.steps, target_point=np.asarray(args.target, dtype=float)),
             rng=rng,
-            tool=ToolHead.for_workspace(workspace),
+            tool=config.tool.to_tool_head(workspace),
+            cluster_threshold=config.embryo.cluster_threshold,
         )
         result = engine.run()
 

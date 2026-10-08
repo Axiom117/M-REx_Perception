@@ -433,13 +433,15 @@ sequenceDiagram
     M->>Q: QApplication(sys.argv)
     M->>Q: apply_theme(app) → Fusion + QSS（theme.py）
     M->>W: MainWindow(load_app_config(args.config))
-    W->>U: Ui_MainWindow(); setupUi(self)（挂载控件）
+    W->>U: Ui_MainWindow() → setupUi(self)（挂载控件）
     W->>W: viewports.set_workspace(config.workspace)
     W->>W: _build_status_bar / _wire_actions / _build_config_menu / _sync_actions
     W->>W: QTimer(16ms).start()（快照泵）
     M->>W: window.show()
     M->>Q: app.exec()（主事件循环）
 ```
+
+> ⚠️ Mermaid 注意：序列图消息文本中的 ASCII 分号 `;` 会被当作语句分隔符（等同换行），会导致解析失败；需避免或用 `#59;` 转义。
 
 入口三选一，最终都到 `main.py::main()`：`python -m mrex_perception`（`__main__.py`）、`mrex` 控制台脚本（`pyproject [project.scripts]`）、`python mrex_perception/main.py`（`__main__` 保护）。工作区配置经 `AppConfig` 聚合注入（`config/app.py`）：启动可用 `--config NAME` 选择，运行期经 Config 菜单切换（`MainWindow.apply_config`；运行中禁用，切换后下一次运行生效）。
 

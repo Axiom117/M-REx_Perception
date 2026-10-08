@@ -114,7 +114,7 @@ M-REx_Perception/
 │   │   │   └── geometry.py           # pixel_to_workspace 等坐标映射
 │   │   ├── models/                   # ② 数据模型（子包 __init__ 转发导出）
 │   │   │   ├── states.py             # EmbryoState / ToolState 枚举（字符串值对齐 MATLAB）
-│   │   │   └── entities.py           # Workspace / Embryo / ToolHead（for_workspace）/ Snapshot
+│   │   │   └── entities.py           # Workspace / Embryo / EmbryoSpec / ToolHead / Snapshot
 │   │   ├── setup/                    # ③ 构造：配置/检测 → 实体
 │   │   │   └── embryos.py            # populate_random / from_detections / mark_clustered
 │   │   ├── sim/                      # ④ 运行期行为
@@ -141,10 +141,16 @@ M-REx_Perception/
 │       ├── __init__.py
 │       ├── loader.py                 # 通用 YAML 读取机制（路径解析 / 解析 / 报错）
 │       ├── workspace.py              # workspace schema（pydantic）+ 加载 / 枚举可用配置
+│       ├── embryo.py                 # embryo schema → EmbryoSpec（几何 + 设置阈值）
+│       ├── tool_head.py              # tool head schema → to_tool_head(workspace) 工厂
 │       └── app.py                    # AppConfig 聚合（注入用）+ load_app_config
 ├── config/
-│   └── workspace/
-│       └── default.yaml              # 工作区配置（snake_case 键）
+│   ├── workspace/
+│   │   └── default.yaml              # 工作区配置（snake_case 键）
+│   ├── embryo/
+│   │   └── default.yaml              # 胚胎模板（几何 / 检测阈值）
+│   └── tool_head/
+│       └── default.yaml              # 工具头（交互面 / 粘附模型 / 运动学）
 ├── python/                           # 【保留】YOLO 工具链（训练/推理脚本 + models）
 ├── src/                              # 【保留】MATLAB 参考实现（冻结，仅作对照）
 ├── tests/
@@ -189,7 +195,7 @@ M-REx_Perception/
 | `attempts` | int | 0 | 抓取尝试次数 |
 | `picked_successfully` | bool | False | 是否成功抓取过 |
 | `shape` | str | `"ellipsoid"` | 固定 |
-| `width` / `length` / `height` | float (mm) | `0.2 / 0.5 / 0.2` | 尺寸（固定值） |
+| `width` / `length` / `height` | float (mm) | `0.2 / 0.5 / 0.2` | 尺寸（默认来自 `EmbryoSpec`，即 `config/embryo/*.yaml`） |
 | `confidence` | float | 1.0（随机）/ CSV（YOLO） | |
 | `position` | `(3,)` | 随机或像素反算 | z=0.1 mm |
 | `orientation` | `(3,3)` | 绕 z 的 yaw 旋转矩阵 | 见下 |
@@ -197,21 +203,26 @@ M-REx_Perception/
 | `is_clustered` | bool | 聚类检测写入 | |
 
 - 随机源：`yaw = 2π·U(0,1)`，`Rz` 同 MATLAB；
-- YOLO 源：`yaw = -theta`（YOLO OBB 角度取负），尺寸仍用固定值（与 `createEmbryoFromYOLO.m` 一致）。
+- YOLO 源：`yaw = -theta`（YOLO OBB 角度取负），尺寸取 `EmbryoSpec`（默认同一组固定值，与 `createEmbryoFromYOLO.m` 一致）。
+- 创建参数（几何、`min_confidence`、`cluster_threshold`、`min_spacing`）集中在 core `EmbryoSpec`（2026-10-08 起由 `config/embryo/*.yaml` 驱动）。
 
 ### 5.3 ToolHead
+
+2026-10-08 起几何/粘附系数/运动学由 `config/tool_head/*.yaml` 驱动（嵌套段 `contact_surface` / `adhesion` 在 core 模型上平铺；默认值镜像 `config/tool_head/default.yaml`）：
 
 | 字段 | 值 | 说明 |
 |---|---|---|
 | `name` | `"adhesionTool"` | |
-| `contact_radius` | 0.25 mm | 接触半径（当前未参与计算，保留） |
+| `contact_radius` | 0.25 mm | 交互面（液滴接触斑）半径 |
+| `contact_shape` | `"circular"` | 交互面形状（预留非圆形态） |
 | `diameter` / `radius` / `height` | 1.5 / 0.75 / 0.5 mm | 圆柱体 |
 | `clearance` | 1 mm | 胚胎吸附时相对工具的 z 偏移、接近高度 |
-| `position` | `[sx/2+15, sy/2+15, 10]` = `[15, 17.5, 10]`（默认配置） | 初始/回零位置 |
+| `position` | `[sx/2+15, sy/2+15, 10]` = `[15, 17.5, 10]`（默认配置） | 初始/回零位置（`home_offset` 驱动） |
 | `orientation` | `I₃` | |
 | `state` | `ToolState` | |
 | `has_embryo` / `attached_embryo_id` | False / 0 | |
 | `adhesion_model` | `"vanDerWaalsDroplet"` | |
+| `base_probability` / `reference_width` / `attempt_penalty` / `max_attempts` | 0.7 / 0.2 / 0.05 / 3 | pickup 概率模型系数（见 §6.5；`reference_width` 是工具标定工作点，与胚胎默认 width 解耦） |
 | `home_position` / `target_position` | 初始位置 | |
 | `velocity` / `max_velocity` | 0 / 10 mm/s | 当前未参与运动学，预留 |
 | `path` | `[]` | 预留 |
@@ -271,9 +282,9 @@ def pixel_to_workspace(x_pixel, y_pixel, image_width, image_height, workspace) -
 
 ### 6.2 `core/setup/embryos.py`
 
-- `populate_random(count, workspace, rng, min_spacing=1.0)`：源区域内均匀采样，与已放置胚距离 ≥ `min_spacing`（最多 1000 次尝试，超限取最后候选——对齐 MATLAB 的 best-effort 行为）。
-- `from_detections(records, workspace)`：置信度过滤 `≥ 0.8`；`yaw = -theta`；空结果返回 `[]` 并告警。
-- `mark_clustered(embryos, threshold=1.0)`：两两距离（仅 xy 平面）< 1 mm 时双方 `is_clustered=True`、`state="clustered"`（注意：与 MATLAB 相同，无条件覆盖 state）。
+- `populate_random(count, workspace, rng, spec=None)`：源区域内均匀采样，与已放置胚距离 ≥ `spec.min_spacing`（`spec: EmbryoSpec`，默认镜像 `config/embryo/default.yaml`；最多 1000 次尝试，超限取最后候选——对齐 MATLAB 的 best-effort 行为）；几何取自 spec。
+- `from_detections(records, workspace, spec=None)`：置信度过滤 `≥ spec.min_confidence`；`yaw = -theta`；空结果返回 `[]` 并告警；几何取自 spec。
+- `mark_clustered(embryos, threshold=1.0)`：两两距离（仅 xy 平面）< `threshold` 时双方 `is_clustered=True`、`state="clustered"`（引擎传入 `EmbryoSpec.cluster_threshold`；注意：与 MATLAB 相同，无条件覆盖 state）。
 
 ### 6.3 `core/sim/planner.py`
 
@@ -333,17 +344,19 @@ tool.target_position = target_position
 ### 6.5 `core/sim/grasping.py`
 
 ```text
-pickup_probability(embryo):
-    p = 0.7 × (embryo.width / 0.2) − 0.05 × embryo.attempts
+pickup_probability(embryo, tool):      # 系数全部来自 tool（config/tool_head/*.yaml）
+    p = tool.base_probability × (embryo.width / tool.reference_width)
+        − tool.attempt_penalty × embryo.attempts
     return clamp(p, 0, 1)
+    # 默认值 0.7 / 0.2 / 0.05 与 MATLAB pickupModel.m 逐项一致
 
 grasp(embryos, tool, rng, pump):
     attempts += 1
-    success = rng.random() < (0.7 − 0.05·attempts)     # width/0.2 = 1
+    success = rng.random() < pickup_probability(selected, tool)
     if success: has_embryo=True; attached_id=id; 双方 state="grasped"; picked_successfully=True
     else:
         has_embryo=False; tool.state="failedGrasp"
-        embryo.state = "failed" if attempts >= 3 else "free"
+        embryo.state = "failed" if attempts >= tool.max_attempts else "free"
     （硬件模式才与泵交互：先 "stop"）
 
 release(embryos, tool, moved_position, pump):
@@ -379,7 +392,7 @@ setup:
     workspace = load_workspace(config_name)
     embryos   = source.detect(...)          # random 或 yolo(占位)
     embryos   = mark_clustered(embryos)
-    tool      = injected_tool              # 必填(kw-only)注入；如 ToolHead.for_workspace(workspace)
+    tool      = injected_tool              # 必填(kw-only)注入；如 config.tool.to_tool_head(workspace)
     log       = MotionLog(); log.record(tool)
     emit(phase="Initial workspace")
 
@@ -500,12 +513,14 @@ stop / cvolume / wrate <r> ml/min / tvolume <v> ml / wrun
 | 层 | 文件 | 内容 |
 |---|---|---|
 | 工作区 | `config/workspace/*.yaml` | §5.1 字段（snake_case 键） |
+| 胚胎模板 | `config/embryo/*.yaml` | 批次几何（shape/width/length/height）+ detection/clustering/placement 阈值 → `EmbryoSpec` |
+| 工具头 | `config/tool_head/*.yaml` | 本体/交互面几何、adhesion 抓取系数、clearance/home_offset 等 → `ToolHeadConfig` 工厂 |
 | 应用默认 | `config/app.yaml`（新增，可选） | mode、source、num_steps、target_point、phase_hold、seed、主题 |
 | 场景/回放 | `tests/fixtures/*.json`（已移除） | 原固定场景 JSON 随对照套件精简删除；如 UI 回放需要可另行重建 |
 
 优先级：CLI/UI 显式传参 > `app.yaml` > 代码内默认值。YAML 解析用 PyYAML；工作区模型用 pydantic 校验（保证错误信息可读）。
 
-聚合注入（2026-10-06 实装）：`config/app.py::AppConfig`（A 方案）聚合**已校验的 core 对象**（当前仅含 `workspace`；未来 tool / 应用默认值以新字段并入，消费方构造签名不变）。入口层用 `load_app_config()` 装配后注入 `MainWindow`；`list_workspace_configs()` 枚举 `config/workspace/*.yaml|yml`，GUI 的 Config 菜单据此支持运行时切换（`MainWindow.apply_config`；运行中禁用，切换后下一次运行生效）。读取载入的完整链路、约定与扩展指南见 [`config-system.md`](./config-system.md)。
+聚合注入（2026-10-06 实装，2026-10-08 扩展）：`config/app.py::AppConfig`（A 方案）聚合已校验的三段——`workspace` / `embryo` 为 core 数据对象，`tool` 为 `ToolHeadConfig` 工厂（tool 有状态，运行时 `to_tool_head(workspace)` 现场构造单个实例）。入口层用 `load_app_config()` 装配后注入 `MainWindow`；`list_workspace_configs()` 枚举 `config/workspace/*.yaml`，GUI 的 Config 菜单据此支持运行时切换（`MainWindow.apply_config`；运行中禁用，切换后下一次运行生效）。读取载入的完整链路、约定与扩展指南见 [`config-system.md`](./config-system.md)。
 
 ---
 

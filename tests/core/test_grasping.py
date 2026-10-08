@@ -36,13 +36,22 @@ def _selected(i: int = 1, attempts: int = 0, width: float = 0.2) -> Embryo:
 
 
 def test_pickup_probability() -> None:
-    assert pickup_probability(Embryo(id=1)) == pytest.approx(0.7)
-    assert pickup_probability(_selected(attempts=1)) == pytest.approx(0.65)
-    assert pickup_probability(_selected(attempts=5)) == pytest.approx(0.45)
-    assert pickup_probability(Embryo(id=1, width=0.1)) == pytest.approx(0.35)
+    tool = ToolHead()
+    assert pickup_probability(Embryo(id=1), tool) == pytest.approx(0.7)
+    assert pickup_probability(_selected(attempts=1), tool) == pytest.approx(0.65)
+    assert pickup_probability(_selected(attempts=5), tool) == pytest.approx(0.45)
+    assert pickup_probability(Embryo(id=1, width=0.1), tool) == pytest.approx(0.35)
     # clamped to [0, 1]
-    assert pickup_probability(Embryo(id=1, width=0.4)) == pytest.approx(1.0)
-    assert pickup_probability(_selected(attempts=20)) == pytest.approx(0.0)
+    assert pickup_probability(Embryo(id=1, width=0.4), tool) == pytest.approx(1.0)
+    assert pickup_probability(_selected(attempts=20), tool) == pytest.approx(0.0)
+
+
+def test_pickup_probability_reads_tool_coefficients() -> None:
+    tool = ToolHead(base_probability=1.0, reference_width=0.4, attempt_penalty=0.1)
+    assert pickup_probability(Embryo(id=1, width=0.2), tool) == pytest.approx(0.5)
+    assert pickup_probability(_selected(attempts=2), tool) == pytest.approx(0.3)
+    # a wider reference still clamps the contact factor to 1
+    assert pickup_probability(Embryo(id=1, width=0.4), tool) == pytest.approx(1.0)
 
 
 def test_grasp_success() -> None:
@@ -82,6 +91,20 @@ def test_grasp_failure_paths() -> None:
     grasp([embryo], tool, _FixedRng(0.7 - 0.05), None)
     assert embryo.state == EmbryoState.FREE
     assert tool.state == ToolState.FAILED_GRASP
+
+
+def test_grasp_uses_tool_max_attempts() -> None:
+    # max_attempts = 1: the first failure is already final
+    embryo = _selected(attempts=0)
+    grasp([embryo], ToolHead(max_attempts=1), _FixedRng(1.0), None)
+    assert embryo.attempts == 1
+    assert embryo.state == EmbryoState.FAILED
+
+    # max_attempts = 5: the third failure still returns the embryo to free
+    embryo = _selected(attempts=2)
+    grasp([embryo], ToolHead(max_attempts=5), _FixedRng(1.0), None)
+    assert embryo.attempts == 3
+    assert embryo.state == EmbryoState.FREE
 
 
 def test_grasp_warns_without_selected() -> None:

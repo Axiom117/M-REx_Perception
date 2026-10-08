@@ -33,16 +33,17 @@ class RngLike(Protocol):
     def random(self) -> float: ...
 
 
-def pickup_probability(embryo: Embryo) -> float:
+def pickup_probability(embryo: Embryo, tool: ToolHead) -> float:
     """Success probability of the next grasp (port of ``pickupModel.m``).
 
-    ``p = 0.7 * (width / 0.2) - 0.05 * attempts``, clamped to [0, 1]. Note
-    ``attempts`` is read after the caller incremented it (MATLAB order).
+    ``p = base_probability * (width / reference_width) - attempt_penalty *
+    attempts``, clamped to [0, 1]. All coefficients come from the tool head
+    (``config/tool_head/*.yaml``) so one formula's constants stay in a single
+    place; the embryo only contributes its width. Note ``attempts`` is read
+    after the caller incremented it (MATLAB order).
     """
-    base_probability = 0.7
-    contact_factor = embryo.width / 0.2
-    attempt_penalty = 0.05 * embryo.attempts
-    probability = base_probability * contact_factor - attempt_penalty
+    contact_factor = embryo.width / tool.reference_width
+    probability = tool.base_probability * contact_factor - tool.attempt_penalty * embryo.attempts
     return float(np.clip(probability, 0.0, 1.0))
 
 
@@ -57,8 +58,8 @@ def grasp(
     Increments ``attempts`` first, then draws ``rng.random() <
     pickup_probability(...)`` (strict ``<``). On success both embryo and tool
     become ``grasped``; on failure the tool becomes ``failedGrasp`` and the
-    embryo is ``failed`` at ``attempts >= 3``, otherwise ``free`` again. In
-    hardware mode the pump is stopped before the attempt.
+    embryo is ``failed`` at ``attempts >= tool.max_attempts``, otherwise
+    ``free`` again. In hardware mode the pump is stopped before the attempt.
     """
     selected = find_selected(embryos)
     if selected is None:
@@ -70,7 +71,7 @@ def grasp(
 
     selected.attempts += 1
 
-    if rng.random() < pickup_probability(selected):
+    if rng.random() < pickup_probability(selected, tool):
         tool.has_embryo = True
         tool.attached_embryo_id = selected.id
         tool.state = ToolState.GRASPED
@@ -80,7 +81,7 @@ def grasp(
         tool.has_embryo = False
         tool.attached_embryo_id = 0
         tool.state = ToolState.FAILED_GRASP
-        if selected.attempts >= 3:
+        if selected.attempts >= tool.max_attempts:
             selected.state = EmbryoState.FAILED
         else:
             selected.state = EmbryoState.FREE

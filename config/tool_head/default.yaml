@@ -1,0 +1,26 @@
+# Tool head: body + interaction surface geometry, adhesion/pickup model, kinematics.
+name: adhesionTool
+shape: cylinder
+diameter: 1.5
+height: 0.5
+
+contact_surface:
+  # interaction surface (droplet contact patch)
+  shape: circular
+  radius: 0.25
+
+adhesion:
+  # pickup probability: p = base_probability * (embryo.width / reference_width)
+  #                       - attempt_penalty * attempts  (clamped to [0, 1])
+  # reference_width is the tool's calibration point, deliberately decoupled
+  # from the embryo config's default width (same 0.2 only by coincidence).
+  model: vanDerWaalsDroplet
+  base_probability: 0.7
+  reference_width: 0.2
+  attempt_penalty: 0.05
+  max_attempts: 3
+
+clearance: 1.0
+max_velocity: 10.0
+# home = [source_region.x / 2 + dx, source_region.y / 2 + dy, dz] (MATLAB port).
+home_offset: [15, 15, 10]

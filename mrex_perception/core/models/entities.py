@@ -51,11 +51,35 @@ class Embryo:
 
 
 @dataclass(eq=False)
+class EmbryoSpec:
+    """Embryo batch template: creation geometry + setup thresholds.
+
+    Embryos are per-instance objects, so the config layer hands over this
+    template (``config/embryo/*.yaml``); setup functions read geometry and
+    thresholds from it while instance state stays on ``Embryo``.
+    """
+
+    shape: str = "ellipsoid"
+    width: float = 0.2
+    length: float = 0.5
+    height: float = 0.2
+    min_confidence: float = 0.8
+    cluster_threshold: float = 1.0
+    min_spacing: float = 1.0
+
+
+@dataclass(eq=False)
 class ToolHead:
-    """Adhesion tool head (fields align with ``createToolHead.m``)."""
+    """Adhesion tool head (fields align with ``createToolHead.m``).
+
+    Interaction-surface geometry, adhesion/pickup coefficients and the grasp
+    policy are config-driven (``config/tool_head/*.yaml``); the dataclass
+    defaults mirror ``config/tool_head/default.yaml``.
+    """
 
     name: str = "adhesionTool"
     contact_radius: float = 0.25
+    contact_shape: str = "circular"
     diameter: float = 1.5
     height: float = 0.5
     clearance: float = 1.0
@@ -66,6 +90,10 @@ class ToolHead:
     has_embryo: bool = False
     attached_embryo_id: int = 0
     adhesion_model: str = "vanDerWaalsDroplet"
+    base_probability: float = 0.7
+    reference_width: float = 0.2
+    attempt_penalty: float = 0.05
+    max_attempts: int = 3
     home_position: np.ndarray = field(default_factory=lambda: np.zeros(3))
     target_position: np.ndarray = field(default_factory=lambda: np.zeros(3))
     velocity: float = 0.0
@@ -73,19 +101,26 @@ class ToolHead:
     path: list[np.ndarray] = field(default_factory=list)
 
     @classmethod
-    def for_workspace(cls, workspace: Workspace) -> ToolHead:
-        """Build the adhesion tool head with its initial (home) position.
+    def for_workspace(
+        cls,
+        workspace: Workspace,
+        *,
+        home_offset: tuple[float, float, float] = (15.0, 15.0, 10.0),
+    ) -> ToolHead:
+        """Build the tool head (default values) with its initial (home) position.
 
-        The initial position is derived from the source region:
-        ``[source_x / 2 + 15, source_y / 2 + 15, 10]`` -> ``[15, 17.5, 10]``
-        for the default config. Home and target position start at the same
-        point (port of ``src/setup/createToolHead.m``).
+        The initial position is ``[source_x / 2 + dx, source_y / 2 + dy, dz]``
+        with ``home_offset = (dx, dy, dz)`` -> ``[15, 17.5, 10]`` for the
+        default config (port of ``src/setup/createToolHead.m``; x/y halve the
+        source-region origin, not its center). Home and target position start
+        at the same point.
         """
+        dx, dy, dz = home_offset
         position = np.array(
             [
-                workspace.source_region[0] / 2 + 15,
-                workspace.source_region[1] / 2 + 15,
-                10.0,
+                workspace.source_region[0] / 2 + dx,
+                workspace.source_region[1] / 2 + dy,
+                dz,
             ]
         )
         tool = cls(position=position)

@@ -13,25 +13,26 @@ from typing import Any
 import numpy as np
 
 from mrex_perception.core.math import pixel_to_workspace, rotation_z
-from mrex_perception.core.models import Embryo, EmbryoState, Workspace
-
-MIN_CONFIDENCE = 0.8
+from mrex_perception.core.models import Embryo, EmbryoSpec, EmbryoState, Workspace
 
 
 def populate_random(
     count: int,
     workspace: Workspace,
     rng: np.random.Generator,
-    min_spacing: float = 1.0,
+    spec: EmbryoSpec | None = None,
 ) -> list[Embryo]:
     """Randomly place ``count`` embryos in the source region.
 
     Best-effort rejection sampling (port of ``populateEmbryos.m``): up to 1000
     candidate attempts per embryo, distances are full 3D distances, and the
     last candidate is accepted if no spot was free. z is fixed at 0.1 mm and
-    yaw is drawn uniformly from [0, 2*pi). Randomness comes from the injected
-    ``rng`` so results are reproducible for a fixed seed.
+    yaw is drawn uniformly from [0, 2*pi). Geometry and the minimum spacing
+    come from ``spec`` (defaults mirror ``config/embryo/default.yaml``);
+    randomness comes from the injected ``rng`` so results are reproducible
+    for a fixed seed.
     """
+    spec = EmbryoSpec() if spec is None else spec
     source_x, source_y, source_w, source_h = workspace.source_region
 
     embryos: list[Embryo] = []
@@ -42,29 +43,44 @@ def populate_random(
             candidate = np.array(
                 [source_x + rng.random() * source_w, source_y + rng.random() * source_h, 0.1]
             )
-            if all(np.linalg.norm(e.position - candidate) >= min_spacing for e in embryos):
+            if all(np.linalg.norm(e.position - candidate) >= spec.min_spacing for e in embryos):
                 position = candidate
                 break
         if position is None:
             position = candidate  # best effort, aligned with MATLAB
         yaw = 2 * np.pi * rng.random()
-        embryos.append(Embryo(id=i + 1, position=position, orientation=rotation_z(yaw)))
+        embryos.append(
+            Embryo(
+                id=i + 1,
+                shape=spec.shape,
+                width=spec.width,
+                length=spec.length,
+                height=spec.height,
+                position=position,
+                orientation=rotation_z(yaw),
+            )
+        )
     return embryos
 
 
 def from_detections(
     records: Sequence[Mapping[str, Any]],
     workspace: Workspace,
+    spec: EmbryoSpec | None = None,
 ) -> list[Embryo]:
     """Build embryos from YOLO detection records.
 
     Records follow the CSV contract from the architecture doc (§10.2):
     ``image, image_width, image_height, class_id, confidence, x, y, width,
     height, theta``. Port of ``createEmbryoFromYOLO.m``: confidence filter
-    >= 0.8, ``yaw = -theta``, pixel positions mapped via
-    ``pixel_to_workspace`` using the image size of the first record.
+    ``>= spec.min_confidence``, ``yaw = -theta``, pixel positions mapped via
+    ``pixel_to_workspace`` using the image size of the first record; geometry
+    comes from ``spec``.
     """
-    detections = [record for record in records if float(record["confidence"]) >= MIN_CONFIDENCE]
+    spec = EmbryoSpec() if spec is None else spec
+    detections = [
+        record for record in records if float(record["confidence"]) >= spec.min_confidence
+    ]
     if not detections:
         warnings.warn("No embryos detected", stacklevel=2)
         return []
@@ -81,6 +97,10 @@ def from_detections(
         embryos.append(
             Embryo(
                 id=i + 1,
+                shape=spec.shape,
+                width=spec.width,
+                length=spec.length,
+                height=spec.height,
                 confidence=float(record["confidence"]),
                 position=position,
                 orientation=rotation_z(yaw),
@@ -92,7 +112,9 @@ def from_detections(
 def mark_clustered(embryos: list[Embryo], threshold: float = 1.0) -> list[Embryo]:
     """Flag embryos closer than ``threshold`` as clustered (in place).
 
-    Port of ``detectClusteredEmbryos.m``: distances use only the xy plane;
+    ``threshold`` is ``EmbryoSpec.cluster_threshold`` (the engine passes the
+    configured value through). Port of ``detectClusteredEmbryos.m``: distances
+    use only the xy plane;
     both members of a close pair get ``is_clustered=True`` and their state is
     overwritten to ``clustered`` unconditionally (MATLAB behavior, see doc
     §16-①). The flag is reset for every embryo first, but ``state`` is not.

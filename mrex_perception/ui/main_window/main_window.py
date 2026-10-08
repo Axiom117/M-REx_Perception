@@ -21,7 +21,7 @@ from mrex_perception import __version__
 from mrex_perception.config.app import AppConfig, load_app_config
 from mrex_perception.config.workspace import list_workspace_configs
 from mrex_perception.core.engine import EngineParams, EngineResult, FinishReason, Snapshot
-from mrex_perception.core.models import EmbryoState, ToolHead, Workspace
+from mrex_perception.core.models import EmbryoState, Workspace
 from mrex_perception.core.setup import populate_random
 from mrex_perception.ui.screenshot import save_three_view_png
 from mrex_perception.ui.worker import SimulationWorker
@@ -70,7 +70,7 @@ class MainWindow(QMainWindow):
         self._wire_actions()
         self._build_config_menu()
         self._sync_actions()
-        self.statusBar().showMessage("就绪")
+        self.statusBar().showMessage("READY")
 
         self._timer = QTimer(self)
         self._timer.setInterval(_TICK_MS)
@@ -95,7 +95,7 @@ class MainWindow(QMainWindow):
         cleared; the next run derives embryos and tool head from the new config.
         """
         if self._worker is not None:
-            self.statusBar().showMessage("运行中无法切换配置")
+            self.statusBar().showMessage("CANNOT SWITCH CONFIG WHILE RUNNING")
             return False
         self._config = config
         self.viewports.set_workspace(config.workspace)
@@ -107,7 +107,9 @@ class MainWindow(QMainWindow):
         if self._worker is not None:
             return
         rng = np.random.default_rng(self.dashboard.seed)
-        embryos = populate_random(self.dashboard.count, self._config.workspace, rng)
+        embryos = populate_random(
+            self.dashboard.count, self._config.workspace, rng, self._config.embryo
+        )
         params = EngineParams(
             num_steps=self.dashboard.num_steps, target_point=self.dashboard.target_point
         )
@@ -116,7 +118,8 @@ class MainWindow(QMainWindow):
             embryos,
             params,
             rng=rng,
-            tool=ToolHead.for_workspace(self._config.workspace),
+            tool=self._config.tool.to_tool_head(self._config.workspace),
+            cluster_threshold=self._config.embryo.cluster_threshold,
         )
         worker.runFinished.connect(self._on_run_finished)
         worker.failed.connect(self._on_run_failed)
@@ -126,7 +129,7 @@ class MainWindow(QMainWindow):
         self.last_result = None
         self.dashboard.begin_run()
         self._sync_actions()
-        self.statusBar().showMessage("运行中…")
+        self.statusBar().showMessage("RUNNING…")
         worker.start()
 
     def toggle_pause(self) -> None:
@@ -136,7 +139,7 @@ class MainWindow(QMainWindow):
         self._worker.request_pause(self._paused)
         self.dashboard.set_paused(self._paused)
         self._sync_actions()
-        self.statusBar().showMessage("已暂停（Step 单步）" if self._paused else "运行中…")
+        self.statusBar().showMessage("PAUSED (Step)" if self._paused else "RUNNING…")
 
     def step_run(self) -> None:
         if self._worker is not None and self._paused:
@@ -146,7 +149,7 @@ class MainWindow(QMainWindow):
         if self._worker is None:
             return
         self._worker.request_stop()
-        self.statusBar().showMessage("正在停止…")
+        self.statusBar().showMessage("STOPPING…")
 
     def reset_run(self) -> None:
         """Clear scene, telemetry and charts back to the initial state."""
@@ -156,16 +159,16 @@ class MainWindow(QMainWindow):
         self.last_result = None
         self.viewports.clear_scene()
         self.dashboard.reset_display()
-        self._step_label.setText("步 0")
+        self._step_label.setText("Step 0")
         self._tool_label.setText("tool —")
-        self.statusBar().showMessage("就绪")
+        self.statusBar().showMessage("READY")
 
     def export_image(self, path: str | Path) -> Path:
         """Save a composite PNG of the three views and report it in the status bar."""
         saved = save_three_view_png(
             path, (self.viewports.top, self.viewports.front, self.viewports.right)
         )
-        self.statusBar().showMessage(f"截图已保存：{saved}")
+        self.statusBar().showMessage(f"IMAGE SAVED: {saved}")
         return saved
 
     # -- window / worker events ----------------------------------------------
@@ -199,7 +202,7 @@ class MainWindow(QMainWindow):
         if now - self._ui_since >= _UI_REFRESH_SECONDS:
             self._ui_since = now
             self.dashboard.update_live(snapshot)
-            self._step_label.setText(f"步 {snapshot.step_index}")
+            self._step_label.setText(f"Step {snapshot.step_index}")
             position = snapshot.tool.position
             self._tool_label.setText(
                 f"tool [{position[0]:.1f}, {position[1]:.1f}, {position[2]:.1f}]"
@@ -213,10 +216,10 @@ class MainWindow(QMainWindow):
         self.last_result = result
         self.dashboard.finish(result)
         if result.finish_reason == FinishReason.STOPPED:
-            self.statusBar().showMessage("已停止（不回位、无汇总）")
+            self.statusBar().showMessage("STOPPED (NO RESET, NO SUMMARY)")
         else:
             moved = sum(1 for e in result.embryos if e.state == EmbryoState.MOVED)
-            self.statusBar().showMessage(f"完成 · moved {moved}/{len(result.embryos)}")
+            self.statusBar().showMessage(f"FINISHED · moved {moved}/{len(result.embryos)}")
 
     def _on_run_failed(self, message: str) -> None:
         self.statusBar().showMessage("运行失败")

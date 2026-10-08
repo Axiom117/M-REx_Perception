@@ -177,6 +177,24 @@ def test_no_free_embryos_completes_with_empty_summary() -> None:
     assert result.tool.state == ToolState.HOME
 
 
+def test_cluster_threshold_is_configurable() -> None:
+    workspace = _workspace()
+    embryos = [_free(1, 5.0, 10.0), _free(2, 6.4, 10.0)]  # 1.4 mm apart
+    engine = SimulationEngine(
+        workspace,
+        embryos,
+        EngineParams(num_steps=2),
+        rng=_FixedRng(0.0),
+        tool=_tool(),
+        cluster_threshold=1.5,
+    )
+
+    result = engine.run()
+
+    assert result.summary is not None and result.summary.moved == 0
+    assert all(e.state == EmbryoState.CLUSTERED for e in result.embryos)
+
+
 def test_phase_and_step_hooks_emit_deep_copies() -> None:
     workspace = _workspace()
     embryos = [_free(1, 6.0, 10.0)]

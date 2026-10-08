@@ -37,3 +37,12 @@ def test_run_reports_config_errors(capsys) -> None:
 
     assert exit_code == 1
     assert "[error]" in capsys.readouterr().err
+
+
+def test_run_reports_tool_head_config_errors(capsys) -> None:
+    exit_code = main(["run", "--tool", "does-not-exist"])
+
+    assert exit_code == 1
+    err = capsys.readouterr().err
+    assert "[error]" in err
+    assert "Tool head config" in err

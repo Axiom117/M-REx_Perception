@@ -1,0 +1,15 @@
+# Embryo batch template: creation geometry + setup thresholds.
+# Consumed by populate_random / from_detections / mark_clustered (via EmbryoSpec).
+shape: ellipsoid
+width: 0.2
+length: 0.5
+height: 0.2
+
+detection:
+  min_confidence: 0.8
+clustering:
+  # xy distance (mm) below which a pair is flagged clustered.
+  threshold: 1.0
+placement:
+  # minimum spacing (mm) for random placement rejection sampling.
+  min_spacing: 1.0

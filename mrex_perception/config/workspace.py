@@ -76,12 +76,11 @@ def load_workspace(config_name: str = "default", config_dir: Path | None = None)
 
 
 def list_workspace_configs(config_dir: Path | None = None) -> list[str]:
-    """Names of the available workspace configs (``*.yaml`` / ``*.yml`` stems).
+    """Names of the available workspace configs (``*.yaml`` stems).
 
-    Sorted and de-duplicated; an empty list means no configs were found
-    (e.g. the directory does not exist).
+    Sorted; an empty list means no configs were found (e.g. the directory
+    does not exist).
     """
 
     directory = Path(config_dir) if config_dir is not None else workspace_config_dir()
-    stems = {path.stem for pattern in ("*.yaml", "*.yml") for path in directory.glob(pattern)}
-    return sorted(stems)
+    return sorted(path.stem for path in directory.glob("*.yaml"))

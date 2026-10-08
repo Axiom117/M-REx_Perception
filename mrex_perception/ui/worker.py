@@ -37,6 +37,7 @@ class SimulationWorker(QThread):
         rng: RngLike,
         tool: ToolHead,
         pump: Pump | None = None,
+        cluster_threshold: float = 1.0,
         step_delay: float = STEP_DELAY_SECONDS,
     ) -> None:
         super().__init__()
@@ -46,6 +47,7 @@ class SimulationWorker(QThread):
         self._rng = rng
         self._tool = tool
         self._pump = pump
+        self._cluster_threshold = cluster_threshold
         self._step_delay = step_delay
 
         self._engine: SimulationEngine | None = None
@@ -91,6 +93,7 @@ class SimulationWorker(QThread):
             rng=self._rng,
             tool=self._tool,
             pump=self._pump,
+            cluster_threshold=self._cluster_threshold,
             on_step=self._on_step,
         )
         with self._gate:

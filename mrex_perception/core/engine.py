@@ -80,6 +80,7 @@ class SimulationEngine:
         rng: RngLike,
         tool: ToolHead,
         pump: Pump | None = None,
+        cluster_threshold: float = 1.0,
         on_phase: Callable[[str], None] | None = None,
         on_step: Callable[[Snapshot], None] | None = None,
     ) -> None:
@@ -88,6 +89,7 @@ class SimulationEngine:
         self._params = params if params is not None else EngineParams()
         self._rng = rng
         self._pump = pump
+        self._cluster_threshold = cluster_threshold
         self._tool = tool
         self._on_phase = on_phase
         self._on_step = on_step
@@ -111,7 +113,7 @@ class SimulationEngine:
 
     def run(self) -> EngineResult:
         """Run the simulation to completion and return its final state."""
-        mark_clustered(self._embryos)
+        mark_clustered(self._embryos, self._cluster_threshold)
         self._motion_log.record(self._tool)  # record the initial pose
         self._set_phase(PHASE_INITIAL)
 
